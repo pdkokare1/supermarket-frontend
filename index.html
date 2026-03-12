@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Supermarket Storefront</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="app-header">
+        <h1>Fresh Market</h1>
+    </header>
+
+    <main id="storefront" class="product-grid">
+        <div class="product-card" onclick="openModal('Fresh Milk', '₹60')">
+            <div class="product-image">🥛</div>
+            <h3>Fresh Milk</h3>
+            <p class="product-weight">1 Liter</p>
+            <button class="add-btn">Add - ₹60</button>
+        </div>
+        
+        <div class="product-card" onclick="openModal('Whole Wheat Bread', '₹45')">
+            <div class="product-image">🍞</div>
+            <h3>Whole Wheat Bread</h3>
+            <p class="product-weight">400g</p>
+            <button class="add-btn">Add - ₹45</button>
+        </div>
+    </main>
+
+    <div id="product-modal-overlay" class="modal-overlay" onclick="closeModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2 id="modal-title">Product Name</h2>
+                <button class="close-btn" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <p id="modal-price" class="price-tag">₹0</p>
+                <p class="modal-desc">Sourced fresh daily. Perfect for your everyday routines.</p>
+                <button class="primary-btn" onclick="addToCart()">Add to Cart</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <nav class="bottom-nav">
+        <button class="nav-item active">🏠 Home</button>
+        <button class="nav-item">🛒 Cart (<span id="cart-count">0</span>)</button>
+        <button class="nav-item">👤 Profile</button>
+    </nav>
+
+    <script src="app.js"></script>
+</body>
+</html>
