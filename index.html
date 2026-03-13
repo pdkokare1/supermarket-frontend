@@ -3,29 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DailyPick | Premium Market</title>
+    <title>DailyPick | Quick Market</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <header class="app-header">
-        <h1>DAILYPICK.</h1>
+        <div class="header-brand">
+            <h1>DAILYPICK</h1>
+            <p class="header-subtitle">Fresh groceries, sorted.</p>
+        </div>
     </header>
 
     <article id="shop-view" class="view-section active">
         <nav class="category-nav">
             <button class="category-pill active" onclick="filterCategory('All', this)">All</button>
-            <button class="category-pill" onclick="filterCategory('Dairy', this)">Dairy</button>
+            <button class="category-pill" onclick="filterCategory('Dairy', this)">Dairy & Eggs</button>
             <button class="category-pill" onclick="filterCategory('Bakery', this)">Bakery</button>
-            <button class="category-pill" onclick="filterCategory('Produce', this)">Produce</button>
+            <button class="category-pill" onclick="filterCategory('Produce', this)">Fruits & Veg</button>
             <button class="category-pill" onclick="filterCategory('Pantry', this)">Pantry</button>
         </nav>
 
-        <main id="storefront" class="product-grid">
+        <main id="skeleton-grid" class="product-grid">
+            <div class="skeleton-card"><div class="skel-img"></div><div class="skel-text"></div><div class="skel-btn"></div></div>
+            <div class="skeleton-card"><div class="skel-img"></div><div class="skel-text"></div><div class="skel-btn"></div></div>
+            <div class="skeleton-card"><div class="skel-img"></div><div class="skel-text"></div><div class="skel-btn"></div></div>
+            <div class="skeleton-card"><div class="skel-img"></div><div class="skel-text"></div><div class="skel-btn"></div></div>
+        </main>
+
+        <main id="storefront" class="product-grid hidden">
             </main>
     </article>
 
@@ -41,25 +51,22 @@
         </main>
     </article>
 
-    <div id="product-modal-overlay" class="modal-overlay" onclick="closeModal()">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <div class="modal-header">
-                <h2 id="modal-title">Product Name</h2>
-                <button class="close-btn" onclick="closeModal()">✕</button>
-            </div>
-            <div class="modal-body">
-                <p id="modal-price" class="price-tag">₹0</p>
-                <p class="modal-desc">Sourced elegantly for your daily routines. Premium quality, guaranteed.</p>
-                <button class="primary-btn" onclick="addToCart()">Add to Cart</button>
-            </div>
+    <div id="cart-ribbon" class="cart-ribbon hidden" onclick="openCart()">
+        <div class="ribbon-info">
+            <span id="ribbon-items-count" class="ribbon-qty">1 ITEM</span>
+            <span id="ribbon-total-price" class="ribbon-price">₹0</span>
+        </div>
+        <div class="ribbon-action">
+            View Cart <span>▶</span>
         </div>
     </div>
 
     <section id="cart-view" class="cart-view">
         <div class="cart-header">
             <button class="back-btn" onclick="closeCart()">← Back</button>
-            <h2>Cart</h2>
-            <div style="width: 60px;"></div> </div>
+            <h2>Checkout</h2>
+            <div style="width: 60px;"></div>
+        </div>
         
         <div id="cart-items-container" class="cart-items">
             </div>
@@ -75,7 +82,7 @@
             </div>
             <hr class="summary-divider">
             <div class="summary-row total-row">
-                <span>Total</span>
+                <span>To Pay</span>
                 <span id="cart-total">₹0</span>
             </div>
             <button class="primary-btn checkout-btn" onclick="placeOrder()">Place Order</button>
@@ -88,10 +95,6 @@
         <button id="nav-shop" class="nav-item active" onclick="switchView('shop')">
             <span class="nav-icon">⬡</span>
             <span class="nav-label">Shop</span>
-        </button>
-        <button class="nav-item" onclick="openCart()">
-            <span class="nav-icon">🛒</span>
-            <span class="nav-label">Bag (<span id="cart-count">0</span>)</span>
         </button>
         <button id="nav-orders" class="nav-item" onclick="switchView('orders')">
             <span class="nav-icon">📦</span>
