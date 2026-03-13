@@ -3,12 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Supermarket Storefront</title>
+    <title>The Gamut | Premium Market</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <header class="app-header">
-        <h1>Fresh Market</h1>
+        <h1>THE GAMUT.</h1>
     </header>
 
     <main id="storefront" class="product-grid">
@@ -22,7 +27,7 @@
             </div>
             <div class="modal-body">
                 <p id="modal-price" class="price-tag">₹0</p>
-                <p class="modal-desc">Sourced fresh daily. Perfect for your everyday routines.</p>
+                <p class="modal-desc">Sourced elegantly for your daily routines. Premium quality, guaranteed.</p>
                 <button class="primary-btn" onclick="addToCart()">Add to Cart</button>
             </div>
         </div>
@@ -31,7 +36,7 @@
     <section id="cart-view" class="cart-view">
         <div class="cart-header">
             <button class="back-btn" onclick="closeCart()">← Back</button>
-            <h2>Your Cart</h2>
+            <h2>Cart</h2>
             <div style="width: 60px;"></div> </div>
         
         <div id="cart-items-container" class="cart-items">
@@ -43,7 +48,7 @@
                 <span id="cart-subtotal">₹0</span>
             </div>
             <div class="summary-row">
-                <span>Delivery Fee</span>
+                <span>Delivery</span>
                 <span id="cart-delivery">₹20</span>
             </div>
             <hr class="summary-divider">
@@ -51,16 +56,25 @@
                 <span>Total</span>
                 <span id="cart-total">₹0</span>
             </div>
-            <button class="primary-btn checkout-btn" onclick="placeOrder()">Place Order (Cash on Delivery)</button>
+            <button class="primary-btn checkout-btn" onclick="placeOrder()">Place Order</button>
         </div>
     </section>
 
     <div id="toast-container"></div>
 
     <nav class="bottom-nav">
-        <button class="nav-item active" onclick="closeCart()">🏠 Home</button>
-        <button class="nav-item" onclick="openCart()">🛒 Cart (<span id="cart-count">0</span>)</button>
-        <button class="nav-item">👤 Profile</button>
+        <button class="nav-item active" onclick="closeCart()">
+            <span class="nav-icon">⬡</span>
+            <span class="nav-label">Shop</span>
+        </button>
+        <button class="nav-item" onclick="openCart()">
+            <span class="nav-icon">🛒</span>
+            <span class="nav-label">Bag (<span id="cart-count">0</span>)</span>
+        </button>
+        <button class="nav-item">
+            <span class="nav-icon">👤</span>
+            <span class="nav-label">Account</span>
+        </button>
     </nav>
 
     <script src="app.js"></script>
