@@ -3,24 +3,55 @@ const BACKEND_URL = 'https://supermarket-backend-production-3a4d.up.railway.app'
 const DELIVERY_FEE = 20;
 
 // --- Local State Management ---
-let allProducts = []; // Master memory bank for the catalog
+let allProducts = []; 
 let cart = []; 
 let currentSelectedProduct = null;
 
-// --- DOM Elements ---
+// --- DOM Elements (Views & Nav) ---
+const views = {
+    shop: document.getElementById('shop-view'),
+    orders: document.getElementById('orders-view')
+};
+const navBtns = {
+    shop: document.getElementById('nav-shop'),
+    orders: document.getElementById('nav-orders')
+};
+
+// --- DOM Elements (Catalog & Cart) ---
 const storefront = document.getElementById('storefront');
 const modalOverlay = document.getElementById('product-modal-overlay');
 const modalTitle = document.getElementById('modal-title');
 const modalPrice = document.getElementById('modal-price');
 const cartCountDisplay = document.getElementById('cart-count');
 const toastContainer = document.getElementById('toast-container');
-
-// Cart DOM Elements
 const cartView = document.getElementById('cart-view');
 const cartItemsContainer = document.getElementById('cart-items-container');
 const cartSubtotalEl = document.getElementById('cart-subtotal');
 const cartDeliveryEl = document.getElementById('cart-delivery');
 const cartTotalEl = document.getElementById('cart-total');
+
+// --- DOM Elements (Tracking) ---
+const trackingContent = document.getElementById('tracking-content');
+
+// --- View Toggling ---
+function switchView(viewName) {
+    Object.keys(views).forEach(key => {
+        if (key === viewName) {
+            views[key].classList.add('active');
+            views[key].classList.remove('hidden');
+            navBtns[key].classList.add('active');
+        } else {
+            views[key].classList.remove('active');
+            views[key].classList.add('hidden');
+            navBtns[key].classList.remove('active');
+        }
+    });
+
+    // If switching to orders tab, actively pull the latest tracking data
+    if (viewName === 'orders') {
+        checkOrderStatus();
+    }
+}
 
 // --- Live Data Fetching & Rendering ---
 async function fetchProducts() {
@@ -29,8 +60,8 @@ async function fetchProducts() {
         const result = await response.json();
 
         if (result.success && result.data) {
-            allProducts = result.data; // Save to local memory
-            renderProducts(allProducts); // Render everything initially
+            allProducts = result.data; 
+            renderProducts(allProducts); 
         }
     } catch (error) {
         console.error('Error fetching live catalog:', error);
@@ -39,7 +70,7 @@ async function fetchProducts() {
 }
 
 function renderProducts(productsToRender) {
-    storefront.innerHTML = ''; // Clear current view
+    storefront.innerHTML = ''; 
     
     if (productsToRender.length === 0) {
         storefront.innerHTML = '<p style="text-align:center; grid-column: span 2; color: #94A3B8; margin-top: 40px;">No items found in this category.</p>';
@@ -53,11 +84,9 @@ function renderProducts(productsToRender) {
 }
 
 function filterCategory(category, btnElement) {
-    // 1. Update UI active states for the pills
     document.querySelectorAll('.category-pill').forEach(btn => btn.classList.remove('active'));
     btnElement.classList.add('active');
 
-    // 2. Filter the master memory array
     if (category === 'All') {
         renderProducts(allProducts);
     } else {
@@ -99,18 +128,16 @@ function closeModal() {
     modalOverlay.classList.remove('active');
 }
 
-// --- Cart & Checkout Logic ---
+// --- Cart Logic ---
 function addToCart() {
     const existingItem = cart.find(item => item._id === currentSelectedProduct._id);
-    
     if (existingItem) {
         existingItem.qty += 1; 
     } else {
         cart.push({ ...currentSelectedProduct, qty: 1 });
     }
-
     updateCartUI();
-    showToast(`Added ${currentSelectedProduct.name} to cart`);
+    showToast(`Added ${currentSelectedProduct.name}`);
     closeModal();
 }
 
@@ -128,10 +155,8 @@ function updateCartUI() {
     }
 
     let subtotal = 0;
-
     cart.forEach(item => {
         subtotal += (item.price * item.qty);
-
         const row = document.createElement('div');
         row.classList.add('cart-item-row');
         row.innerHTML = `
@@ -158,9 +183,7 @@ function adjustQty(productId, change) {
     const itemIndex = cart.findIndex(item => item._id === productId);
     if (itemIndex > -1) {
         cart[itemIndex].qty += change;
-        if (cart[itemIndex].qty <= 0) {
-            cart.splice(itemIndex, 1);
-        }
+        if (cart[itemIndex].qty <= 0) cart.splice(itemIndex, 1);
     }
     updateCartUI();
 }
@@ -174,6 +197,7 @@ function closeCart() {
     cartView.classList.remove('active');
 }
 
+// --- Checkout & Tracking Logic ---
 async function placeOrder() {
     if (cart.length === 0) {
         showToast('Your cart is empty!');
@@ -190,9 +214,7 @@ async function placeOrder() {
     try {
         const response = await fetch(`${BACKEND_URL}/api/orders`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 items: cart,
                 totalAmount: finalTotal
@@ -202,19 +224,66 @@ async function placeOrder() {
         const result = await response.json();
 
         if (result.success) {
+            // Save the exact database ID to the browser's persistent memory
+            localStorage.setItem('dailyPick_activeOrderId', result.orderId);
+            
             cart = [];
             updateCartUI();
             closeCart();
+            
+            // Automatically switch the user to the tracking screen
+            switchView('orders');
             showToast('Order Placed Successfully! 🚀');
         } else {
-            showToast('Failed to place order. Please try again.');
+            showToast('Failed to place order.');
         }
     } catch (error) {
-        console.error('Checkout error:', error);
         showToast('Network error. Check your connection.');
     } finally {
         checkoutBtn.innerText = 'Place Order';
         checkoutBtn.disabled = false;
+    }
+}
+
+async function checkOrderStatus() {
+    // Look in the phone's memory for a saved order
+    const savedOrderId = localStorage.getItem('dailyPick_activeOrderId');
+    
+    if (!savedOrderId) {
+        trackingContent.innerHTML = '<p class="empty-state">You have no active orders right now.</p>';
+        return;
+    }
+
+    trackingContent.innerHTML = '<p class="empty-state">Fetching live status...</p>';
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/api/orders/${savedOrderId}`);
+        const result = await response.json();
+
+        if (result.success) {
+            const order = result.data;
+            const timeString = new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            // Render the live tracking card
+            trackingContent.innerHTML = `
+                <div class="tracking-card">
+                    <h3>Order #${(order._id).toString().slice(-4).toUpperCase()}</h3>
+                    <p>Placed at ${timeString}</p>
+                    
+                    <div class="status-badge ${order.status === 'Dispatched' ? 'dispatched' : ''}">
+                        ${order.status}
+                    </div>
+                    
+                    <div style="margin-top: 24px; font-size: 14px; font-weight: 500;">
+                        Total Amount: ₹${order.totalAmount}
+                    </div>
+                </div>
+            `;
+        } else {
+            trackingContent.innerHTML = '<p class="empty-state">Order details could not be found.</p>';
+        }
+    } catch (error) {
+        trackingContent.innerHTML = '<p class="empty-state">Network error checking status.</p>';
     }
 }
 
