@@ -5,9 +5,16 @@ const DELIVERY_FEE = 20;
 // --- Local State Management ---
 let allProducts = []; 
 let cart = []; 
-let currentSelectedProduct = null;
 
-// --- DOM Elements (Views & Nav) ---
+// --- DOM Elements ---
+const storefront = document.getElementById('storefront');
+const skeletonGrid = document.getElementById('skeleton-grid');
+const cartRibbon = document.getElementById('cart-ribbon');
+const cartView = document.getElementById('cart-view');
+const cartItemsContainer = document.getElementById('cart-items-container');
+const toastContainer = document.getElementById('toast-container');
+const trackingContent = document.getElementById('tracking-content');
+
 const views = {
     shop: document.getElementById('shop-view'),
     orders: document.getElementById('orders-view')
@@ -16,22 +23,6 @@ const navBtns = {
     shop: document.getElementById('nav-shop'),
     orders: document.getElementById('nav-orders')
 };
-
-// --- DOM Elements (Catalog & Cart) ---
-const storefront = document.getElementById('storefront');
-const modalOverlay = document.getElementById('product-modal-overlay');
-const modalTitle = document.getElementById('modal-title');
-const modalPrice = document.getElementById('modal-price');
-const cartCountDisplay = document.getElementById('cart-count');
-const toastContainer = document.getElementById('toast-container');
-const cartView = document.getElementById('cart-view');
-const cartItemsContainer = document.getElementById('cart-items-container');
-const cartSubtotalEl = document.getElementById('cart-subtotal');
-const cartDeliveryEl = document.getElementById('cart-delivery');
-const cartTotalEl = document.getElementById('cart-total');
-
-// --- DOM Elements (Tracking) ---
-const trackingContent = document.getElementById('tracking-content');
 
 // --- View Toggling ---
 function switchView(viewName) {
@@ -47,10 +38,7 @@ function switchView(viewName) {
         }
     });
 
-    // If switching to orders tab, actively pull the latest tracking data
-    if (viewName === 'orders') {
-        checkOrderStatus();
-    }
+    if (viewName === 'orders') checkOrderStatus();
 }
 
 // --- Live Data Fetching & Rendering ---
@@ -61,32 +49,54 @@ async function fetchProducts() {
 
         if (result.success && result.data) {
             allProducts = result.data; 
+            // Hide skeletons, show real grid
+            skeletonGrid.classList.add('hidden');
+            storefront.classList.remove('hidden');
             renderProducts(allProducts); 
         }
     } catch (error) {
-        console.error('Error fetching live catalog:', error);
-        storefront.innerHTML = '<p style="text-align:center; grid-column: span 2; color: #94A3B8;">Failed to load market items. Please refresh.</p>';
+        skeletonGrid.innerHTML = '<p style="grid-column: span 2; text-align:center;">Failed to connect.</p>';
     }
 }
 
 function renderProducts(productsToRender) {
     storefront.innerHTML = ''; 
     
-    if (productsToRender.length === 0) {
-        storefront.innerHTML = '<p style="text-align:center; grid-column: span 2; color: #94A3B8; margin-top: 40px;">No items found in this category.</p>';
-        return;
-    }
-
     productsToRender.forEach(product => {
-        const card = createProductCard(product);
+        const card = document.createElement('div');
+        card.classList.add('product-card');
+        
+        let emoji = '📦';
+        if (product.category === 'Dairy') emoji = '🥛';
+        if (product.category === 'Bakery') emoji = '🍞';
+        if (product.category === 'Produce') emoji = '🍌';
+        if (product.category === 'Pantry') emoji = '🌾';
+
+        card.innerHTML = `
+            <div>
+                <div class="product-image">${emoji}</div>
+                <div class="product-info">
+                    <h3>${product.name}</h3>
+                    <p class="product-weight">${product.weightOrVolume}</p>
+                </div>
+            </div>
+            <div class="price-action-row">
+                <div class="product-price">₹${product.price}</div>
+                <div class="action-container" id="action-container-${product._id}">
+                    </div>
+            </div>
+        `;
         storefront.appendChild(card);
+        
+        // Immediately render the correct button state for this card
+        updateCardActionUI(product._id);
     });
 }
 
 function filterCategory(category, btnElement) {
     document.querySelectorAll('.category-pill').forEach(btn => btn.classList.remove('active'));
     btnElement.classList.add('active');
-
+    
     if (category === 'All') {
         renderProducts(allProducts);
     } else {
@@ -95,68 +105,72 @@ function filterCategory(category, btnElement) {
     }
 }
 
-function createProductCard(product) {
-    const card = document.createElement('div');
-    card.classList.add('product-card');
+// --- Quick Commerce Cart Engine ---
+function quickAdd(productId) {
+    const product = allProducts.find(p => p._id === productId);
+    if (!product) return;
     
-    let emoji = '📦';
-    if (product.category === 'Dairy') emoji = '🥛';
-    if (product.category === 'Bakery') emoji = '🍞';
-    if (product.category === 'Produce') emoji = '🍌';
-    if (product.category === 'Pantry') emoji = '🌾';
-
-    card.innerHTML = `
-        <div class="product-image">${emoji}</div>
-        <h3>${product.name}</h3>
-        <p class="product-weight">${product.weightOrVolume}</p>
-        <button class="add-btn">Add - ₹${product.price}</button>
-    `;
-
-    card.onclick = () => openModal(product);
-    return card;
+    cart.push({ ...product, qty: 1 });
+    updateCardActionUI(productId);
+    updateGlobalCartUI();
 }
 
-// --- Modal Logic ---
-function openModal(product) {
-    currentSelectedProduct = product;
-    modalTitle.innerText = product.name;
-    modalPrice.innerText = `₹${product.price}`;
-    modalOverlay.classList.add('active');
-}
-
-function closeModal() {
-    modalOverlay.classList.remove('active');
-}
-
-// --- Cart Logic ---
-function addToCart() {
-    const existingItem = cart.find(item => item._id === currentSelectedProduct._id);
-    if (existingItem) {
-        existingItem.qty += 1; 
-    } else {
-        cart.push({ ...currentSelectedProduct, qty: 1 });
+function adjustQty(productId, change) {
+    const itemIndex = cart.findIndex(item => item._id === productId);
+    if (itemIndex > -1) {
+        cart[itemIndex].qty += change;
+        if (cart[itemIndex].qty <= 0) {
+            cart.splice(itemIndex, 1); // Remove if 0
+        }
     }
-    updateCartUI();
-    showToast(`Added ${currentSelectedProduct.name}`);
-    closeModal();
+    updateCardActionUI(productId);
+    updateGlobalCartUI();
 }
 
-function updateCartUI() {
-    const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
-    cartCountDisplay.innerText = totalItems;
-
-    cartItemsContainer.innerHTML = '';
+// Surgically updates just the one button container on the storefront grid
+function updateCardActionUI(productId) {
+    const container = document.getElementById(`action-container-${productId}`);
+    if (!container) return; // Happens if the item is filtered out of view
     
+    const cartItem = cart.find(item => item._id === productId);
+    const qty = cartItem ? cartItem.qty : 0;
+    
+    if (qty === 0) {
+        container.innerHTML = `<button class="add-btn" onclick="quickAdd('${productId}')">ADD</button>`;
+    } else {
+        container.innerHTML = `
+            <div class="stepper">
+                <button onclick="adjustQty('${productId}', -1)">−</button>
+                <span>${qty}</span>
+                <button onclick="adjustQty('${productId}', 1)">+</button>
+            </div>
+        `;
+    }
+}
+
+function updateGlobalCartUI() {
+    const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+    
+    // 1. Toggle the Sticky Ribbon
+    if (totalItems > 0) {
+        document.getElementById('ribbon-items-count').innerText = `${totalItems} ITEM${totalItems > 1 ? 'S' : ''}`;
+        document.getElementById('ribbon-total-price').innerText = `₹${subtotal}`;
+        cartRibbon.classList.remove('hidden');
+    } else {
+        cartRibbon.classList.add('hidden');
+    }
+
+    // 2. Render Full Cart View (only if it's open, but we update DOM anyway for safety)
+    cartItemsContainer.innerHTML = '';
     if (cart.length === 0) {
         cartItemsContainer.innerHTML = '<p style="text-align:center; color: #94A3B8; margin-top:40px;">Your cart is empty.</p>';
-        cartSubtotalEl.innerText = '₹0';
-        cartTotalEl.innerText = '₹0';
+        document.getElementById('cart-subtotal').innerText = '₹0';
+        document.getElementById('cart-total').innerText = '₹0';
         return;
     }
 
-    let subtotal = 0;
     cart.forEach(item => {
-        subtotal += (item.price * item.qty);
         const row = document.createElement('div');
         row.classList.add('cart-item-row');
         row.innerHTML = `
@@ -165,31 +179,24 @@ function updateCartUI() {
                 <div class="cart-item-title">${item.name}</div>
                 <div class="cart-item-price">₹${item.price}</div>
             </div>
-            <div class="qty-controls">
-                <button class="qty-btn" onclick="adjustQty('${item._id}', -1)">-</button>
-                <span style="font-weight:bold;">${item.qty}</span>
-                <button class="qty-btn" onclick="adjustQty('${item._id}', 1)">+</button>
+            <div class="action-container" style="width: 72px;">
+                <div class="stepper">
+                    <button onclick="adjustQty('${item._id}', -1)">−</button>
+                    <span>${item.qty}</span>
+                    <button onclick="adjustQty('${item._id}', 1)">+</button>
+                </div>
             </div>
         `;
         cartItemsContainer.appendChild(row);
     });
 
-    cartSubtotalEl.innerText = `₹${subtotal}`;
-    cartDeliveryEl.innerText = `₹${DELIVERY_FEE}`;
-    cartTotalEl.innerText = `₹${subtotal + DELIVERY_FEE}`;
-}
-
-function adjustQty(productId, change) {
-    const itemIndex = cart.findIndex(item => item._id === productId);
-    if (itemIndex > -1) {
-        cart[itemIndex].qty += change;
-        if (cart[itemIndex].qty <= 0) cart.splice(itemIndex, 1);
-    }
-    updateCartUI();
+    document.getElementById('cart-subtotal').innerText = `₹${subtotal}`;
+    document.getElementById('cart-total').innerText = `₹${subtotal + DELIVERY_FEE}`;
 }
 
 function openCart() {
-    updateCartUI(); 
+    if (cart.length === 0) return; // Don't open empty cart
+    updateGlobalCartUI(); 
     cartView.classList.add('active');
 }
 
@@ -199,10 +206,7 @@ function closeCart() {
 
 // --- Checkout & Tracking Logic ---
 async function placeOrder() {
-    if (cart.length === 0) {
-        showToast('Your cart is empty!');
-        return;
-    }
+    if (cart.length === 0) return;
 
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
     const finalTotal = subtotal + DELIVERY_FEE;
@@ -215,30 +219,27 @@ async function placeOrder() {
         const response = await fetch(`${BACKEND_URL}/api/orders`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                items: cart,
-                totalAmount: finalTotal
-            })
+            body: JSON.stringify({ items: cart, totalAmount: finalTotal })
         });
 
         const result = await response.json();
 
         if (result.success) {
-            // Save the exact database ID to the browser's persistent memory
             localStorage.setItem('dailyPick_activeOrderId', result.orderId);
             
             cart = [];
-            updateCartUI();
+            // Re-render the grid to clear all the steppers back to "ADD"
+            renderProducts(allProducts);
+            updateGlobalCartUI();
             closeCart();
             
-            // Automatically switch the user to the tracking screen
             switchView('orders');
-            showToast('Order Placed Successfully! 🚀');
+            showToast('Order Received! 🚀');
         } else {
             showToast('Failed to place order.');
         }
     } catch (error) {
-        showToast('Network error. Check your connection.');
+        showToast('Network error.');
     } finally {
         checkoutBtn.innerText = 'Place Order';
         checkoutBtn.disabled = false;
@@ -246,14 +247,11 @@ async function placeOrder() {
 }
 
 async function checkOrderStatus() {
-    // Look in the phone's memory for a saved order
     const savedOrderId = localStorage.getItem('dailyPick_activeOrderId');
-    
     if (!savedOrderId) {
         trackingContent.innerHTML = '<p class="empty-state">You have no active orders right now.</p>';
         return;
     }
-
     trackingContent.innerHTML = '<p class="empty-state">Fetching live status...</p>';
 
     try {
@@ -264,18 +262,15 @@ async function checkOrderStatus() {
             const order = result.data;
             const timeString = new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             
-            // Render the live tracking card
             trackingContent.innerHTML = `
                 <div class="tracking-card">
                     <h3>Order #${(order._id).toString().slice(-4).toUpperCase()}</h3>
                     <p>Placed at ${timeString}</p>
-                    
                     <div class="status-badge ${order.status === 'Dispatched' ? 'dispatched' : ''}">
                         ${order.status}
                     </div>
-                    
-                    <div style="margin-top: 24px; font-size: 14px; font-weight: 500;">
-                        Total Amount: ₹${order.totalAmount}
+                    <div style="margin-top: 24px; font-size: 14px; font-weight: 700;">
+                        To Pay: ₹${order.totalAmount} (COD)
                     </div>
                 </div>
             `;
@@ -292,7 +287,7 @@ function showToast(message) {
     toast.classList.add('toast');
     toast.innerText = message;
     toastContainer.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
+    setTimeout(() => toast.remove(), 2500);
 }
 
 // --- Boot Sequence ---
