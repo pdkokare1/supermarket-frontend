@@ -17,7 +17,6 @@
             <h1>DAILYPICK</h1>
             <p class="header-subtitle">Fresh groceries, sorted.</p>
         </div>
-        
         <div class="search-container">
             <input type="text" id="search-input" class="search-input" placeholder="Search 'Milk', 'Bread', 'Eggs'..." oninput="handleSearch(event)">
         </div>
@@ -39,8 +38,7 @@
             <div class="skeleton-card"><div class="skel-img"></div><div class="skel-text"></div><div class="skel-btn"></div></div>
         </main>
 
-        <main id="storefront" class="product-grid hidden">
-            </main>
+        <main id="storefront" class="product-grid hidden"></main>
     </article>
 
     <article id="orders-view" class="view-section hidden">
@@ -60,9 +58,7 @@
             <span id="ribbon-items-count" class="ribbon-qty">1 ITEM</span>
             <span id="ribbon-total-price" class="ribbon-price">₹0</span>
         </div>
-        <div class="ribbon-action">
-            View Cart <span>▶</span>
-        </div>
+        <div class="ribbon-action">View Cart <span>▶</span></div>
     </div>
 
     <section id="cart-view" class="cart-view">
@@ -72,8 +68,22 @@
             <div style="width: 60px;"></div>
         </div>
         
-        <div id="cart-items-container" class="cart-items">
+        <div id="cart-items-container" class="cart-items"></div>
+
+        <div class="schedule-section">
+            <h3 class="delivery-title" style="margin-bottom: 12px;">Delivery Speed</h3>
+            <div class="delivery-tabs">
+                <button id="tab-instant" class="del-tab active" onclick="setDeliveryType('Instant')">⚡ Instant</button>
+                <button id="tab-routine" class="del-tab" onclick="setDeliveryType('Routine')">📅 Daily Routine</button>
             </div>
+            <div id="routine-options" class="hidden" style="margin-top: 16px;">
+                <label style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; display: block; text-transform: uppercase;">Select Routine Time</label>
+                <select id="schedule-time" class="delivery-input">
+                    <option value="Daily at 7:00 AM">Morning (7:00 AM)</option>
+                    <option value="Daily at 6:00 PM">Evening (6:00 PM)</option>
+                </select>
+            </div>
+        </div>
 
         <div class="delivery-section">
             <h3 class="delivery-title">Delivery Details</h3>
@@ -83,19 +93,10 @@
         </div>
 
         <div class="cart-footer">
-            <div class="summary-row">
-                <span>Subtotal</span>
-                <span id="cart-subtotal">₹0</span>
-            </div>
-            <div class="summary-row">
-                <span>Delivery</span>
-                <span id="cart-delivery">₹20</span>
-            </div>
+            <div class="summary-row"><span>Subtotal</span><span id="cart-subtotal">₹0</span></div>
+            <div class="summary-row"><span>Delivery</span><span id="cart-delivery">₹20</span></div>
             <hr class="summary-divider">
-            <div class="summary-row total-row">
-                <span>To Pay</span>
-                <span id="cart-total">₹0</span>
-            </div>
+            <div class="summary-row total-row"><span>To Pay</span><span id="cart-total">₹0</span></div>
             <button class="primary-btn checkout-btn" onclick="placeOrder()">Place Order</button>
         </div>
     </section>
@@ -103,14 +104,8 @@
     <div id="toast-container"></div>
 
     <nav class="bottom-nav">
-        <button id="nav-shop" class="nav-item active" onclick="switchView('shop')">
-            <span class="nav-icon">⬡</span>
-            <span class="nav-label">Shop</span>
-        </button>
-        <button id="nav-orders" class="nav-item" onclick="switchView('orders')">
-            <span class="nav-icon">📦</span>
-            <span class="nav-label">Orders</span>
-        </button>
+        <button id="nav-shop" class="nav-item active" onclick="switchView('shop')"><span class="nav-icon">⬡</span><span class="nav-label">Shop</span></button>
+        <button id="nav-orders" class="nav-item" onclick="switchView('orders')"><span class="nav-icon">📦</span><span class="nav-label">Orders</span></button>
     </nav>
 
     <script src="app.js"></script>
