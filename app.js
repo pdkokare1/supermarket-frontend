@@ -94,9 +94,9 @@ function renderProducts(productsToRender) {
     });
 }
 
-// --- Filtering & Search ---
+// --- Filtering & Search (Custom Fuzzy Algorithm) ---
 function filterCategory(category, btnElement) {
-    document.getElementById('search-input').value = ''; // clear search if category clicked
+    document.getElementById('search-input').value = ''; 
     document.querySelectorAll('.category-pill').forEach(btn => btn.classList.remove('active'));
     btnElement.classList.add('active');
     
@@ -111,39 +111,30 @@ function filterCategory(category, btnElement) {
 function handleSearch(event) {
     const query = event.target.value.toLowerCase().trim();
     
-    // If empty, reset to "All" category
     if (!query) {
-        const allBtn = document.querySelector('.category-pill'); // The first pill is 'All'
+        const allBtn = document.querySelector('.category-pill'); 
         filterCategory('All', allBtn);
         return;
     }
 
-    // Remove active styling from category pills
     document.querySelectorAll('.category-pill').forEach(btn => btn.classList.remove('active'));
 
-    // Filter using the custom fuzzy algorithm
     const results = allProducts.filter(product => isFuzzyMatch(query, product.name.toLowerCase()));
     renderProducts(results);
 }
 
-// Custom Fuzzy Search Algorithm
 function isFuzzyMatch(query, target) {
-    // 1. Exact Substring Match (e.g. "milk" in "Cow Milk")
     if (target.includes(query)) return true;
 
-    // 2. Subsequence Match (e.g. "mlk" in "milk")
     let qIdx = 0;
     for (let i = 0; i < target.length; i++) {
         if (target[i] === query[qIdx]) qIdx++;
         if (qIdx === query.length) return true;
     }
 
-    // 3. Typo Tolerance (Levenshtein Distance)
-    // Only apply if the user typed at least 3 characters to avoid random 2-letter matches
     if (query.length > 2) {
         const targetWords = target.split(' ');
         for (let word of targetWords) {
-            // Allow 1 typo for small words, 2 typos for longer words
             const maxTypos = query.length <= 4 ? 1 : 2;
             if (calculateLevenshtein(query, word) <= maxTypos) return true;
         }
@@ -152,7 +143,6 @@ function isFuzzyMatch(query, target) {
     return false;
 }
 
-// Mathematical string distance calculator
 function calculateLevenshtein(a, b) {
     if (a.length === 0) return b.length;
     if (b.length === 0) return a.length;
@@ -163,9 +153,9 @@ function calculateLevenshtein(a, b) {
         for (let j = 1; j <= b.length; j++) {
             const indicator = a[i - 1] === b[j - 1] ? 0 : 1;
             matrix[i][j] = Math.min(
-                matrix[i][j - 1] + 1, // insertion
-                matrix[i - 1][j] + 1, // deletion
-                matrix[i - 1][j - 1] + indicator // substitution
+                matrix[i][j - 1] + 1, 
+                matrix[i - 1][j] + 1, 
+                matrix[i - 1][j - 1] + indicator 
             );
         }
     }
@@ -272,6 +262,16 @@ function closeCart() {
 async function placeOrder() {
     if (cart.length === 0) return;
 
+    // Grab delivery data
+    const name = document.getElementById('cust-name').value.trim();
+    const phone = document.getElementById('cust-phone').value.trim();
+    const address = document.getElementById('cust-address').value.trim();
+
+    if (!name || !phone || !address) {
+        showToast('Please fill out all delivery details!');
+        return;
+    }
+
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
     const finalTotal = subtotal + DELIVERY_FEE;
 
@@ -283,7 +283,13 @@ async function placeOrder() {
         const response = await fetch(`${BACKEND_URL}/api/orders`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ items: cart, totalAmount: finalTotal })
+            body: JSON.stringify({ 
+                customerName: name,
+                customerPhone: phone,
+                deliveryAddress: address,
+                items: cart, 
+                totalAmount: finalTotal 
+            })
         });
 
         const result = await response.json();
@@ -291,7 +297,12 @@ async function placeOrder() {
         if (result.success) {
             localStorage.setItem('dailyPick_activeOrderId', result.orderId);
             
+            // Clear cart and delivery form
             cart = [];
+            document.getElementById('cust-name').value = '';
+            document.getElementById('cust-phone').value = '';
+            document.getElementById('cust-address').value = '';
+
             renderProducts(allProducts);
             updateGlobalCartUI();
             closeCart();
