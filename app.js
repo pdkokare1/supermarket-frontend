@@ -49,7 +49,6 @@ async function fetchProducts() {
 
         if (result.success && result.data) {
             allProducts = result.data; 
-            // Hide skeletons, show real grid
             skeletonGrid.classList.add('hidden');
             storefront.classList.remove('hidden');
             renderProducts(allProducts); 
@@ -62,6 +61,11 @@ async function fetchProducts() {
 function renderProducts(productsToRender) {
     storefront.innerHTML = ''; 
     
+    if (productsToRender.length === 0) {
+        storefront.innerHTML = '<p style="grid-column: span 2; text-align:center; color: #94A3B8; margin-top: 40px;">No products found.</p>';
+        return;
+    }
+
     productsToRender.forEach(product => {
         const card = document.createElement('div');
         card.classList.add('product-card');
@@ -82,18 +86,17 @@ function renderProducts(productsToRender) {
             </div>
             <div class="price-action-row">
                 <div class="product-price">₹${product.price}</div>
-                <div class="action-container" id="action-container-${product._id}">
-                    </div>
+                <div class="action-container" id="action-container-${product._id}"></div>
             </div>
         `;
         storefront.appendChild(card);
-        
-        // Immediately render the correct button state for this card
         updateCardActionUI(product._id);
     });
 }
 
+// --- Filtering & Search ---
 function filterCategory(category, btnElement) {
+    document.getElementById('search-input').value = ''; // clear search if category clicked
     document.querySelectorAll('.category-pill').forEach(btn => btn.classList.remove('active'));
     btnElement.classList.add('active');
     
@@ -103,6 +106,70 @@ function filterCategory(category, btnElement) {
         const filtered = allProducts.filter(p => p.category === category);
         renderProducts(filtered);
     }
+}
+
+function handleSearch(event) {
+    const query = event.target.value.toLowerCase().trim();
+    
+    // If empty, reset to "All" category
+    if (!query) {
+        const allBtn = document.querySelector('.category-pill'); // The first pill is 'All'
+        filterCategory('All', allBtn);
+        return;
+    }
+
+    // Remove active styling from category pills
+    document.querySelectorAll('.category-pill').forEach(btn => btn.classList.remove('active'));
+
+    // Filter using the custom fuzzy algorithm
+    const results = allProducts.filter(product => isFuzzyMatch(query, product.name.toLowerCase()));
+    renderProducts(results);
+}
+
+// Custom Fuzzy Search Algorithm
+function isFuzzyMatch(query, target) {
+    // 1. Exact Substring Match (e.g. "milk" in "Cow Milk")
+    if (target.includes(query)) return true;
+
+    // 2. Subsequence Match (e.g. "mlk" in "milk")
+    let qIdx = 0;
+    for (let i = 0; i < target.length; i++) {
+        if (target[i] === query[qIdx]) qIdx++;
+        if (qIdx === query.length) return true;
+    }
+
+    // 3. Typo Tolerance (Levenshtein Distance)
+    // Only apply if the user typed at least 3 characters to avoid random 2-letter matches
+    if (query.length > 2) {
+        const targetWords = target.split(' ');
+        for (let word of targetWords) {
+            // Allow 1 typo for small words, 2 typos for longer words
+            const maxTypos = query.length <= 4 ? 1 : 2;
+            if (calculateLevenshtein(query, word) <= maxTypos) return true;
+        }
+    }
+    
+    return false;
+}
+
+// Mathematical string distance calculator
+function calculateLevenshtein(a, b) {
+    if (a.length === 0) return b.length;
+    if (b.length === 0) return a.length;
+    const matrix = Array(a.length + 1).fill(null).map(() => Array(b.length + 1).fill(null));
+    for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
+    for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
+    for (let i = 1; i <= a.length; i++) {
+        for (let j = 1; j <= b.length; j++) {
+            const indicator = a[i - 1] === b[j - 1] ? 0 : 1;
+            matrix[i][j] = Math.min(
+                matrix[i][j - 1] + 1, // insertion
+                matrix[i - 1][j] + 1, // deletion
+                matrix[i - 1][j - 1] + indicator // substitution
+            );
+        }
+    }
+    return matrix[a.length][b.length];
 }
 
 // --- Quick Commerce Cart Engine ---
@@ -120,17 +187,16 @@ function adjustQty(productId, change) {
     if (itemIndex > -1) {
         cart[itemIndex].qty += change;
         if (cart[itemIndex].qty <= 0) {
-            cart.splice(itemIndex, 1); // Remove if 0
+            cart.splice(itemIndex, 1); 
         }
     }
     updateCardActionUI(productId);
     updateGlobalCartUI();
 }
 
-// Surgically updates just the one button container on the storefront grid
 function updateCardActionUI(productId) {
     const container = document.getElementById(`action-container-${productId}`);
-    if (!container) return; // Happens if the item is filtered out of view
+    if (!container) return; 
     
     const cartItem = cart.find(item => item._id === productId);
     const qty = cartItem ? cartItem.qty : 0;
@@ -152,7 +218,6 @@ function updateGlobalCartUI() {
     const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
     
-    // 1. Toggle the Sticky Ribbon
     if (totalItems > 0) {
         document.getElementById('ribbon-items-count').innerText = `${totalItems} ITEM${totalItems > 1 ? 'S' : ''}`;
         document.getElementById('ribbon-total-price').innerText = `₹${subtotal}`;
@@ -161,7 +226,6 @@ function updateGlobalCartUI() {
         cartRibbon.classList.add('hidden');
     }
 
-    // 2. Render Full Cart View (only if it's open, but we update DOM anyway for safety)
     cartItemsContainer.innerHTML = '';
     if (cart.length === 0) {
         cartItemsContainer.innerHTML = '<p style="text-align:center; color: #94A3B8; margin-top:40px;">Your cart is empty.</p>';
@@ -195,7 +259,7 @@ function updateGlobalCartUI() {
 }
 
 function openCart() {
-    if (cart.length === 0) return; // Don't open empty cart
+    if (cart.length === 0) return;
     updateGlobalCartUI(); 
     cartView.classList.add('active');
 }
@@ -228,7 +292,6 @@ async function placeOrder() {
             localStorage.setItem('dailyPick_activeOrderId', result.orderId);
             
             cart = [];
-            // Re-render the grid to clear all the steppers back to "ADD"
             renderProducts(allProducts);
             updateGlobalCartUI();
             closeCart();
