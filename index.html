@@ -16,6 +16,14 @@
         <h1>DAILYPICK.</h1>
     </header>
 
+    <nav class="category-nav">
+        <button class="category-pill active" onclick="filterCategory('All', this)">All</button>
+        <button class="category-pill" onclick="filterCategory('Dairy', this)">Dairy</button>
+        <button class="category-pill" onclick="filterCategory('Bakery', this)">Bakery</button>
+        <button class="category-pill" onclick="filterCategory('Produce', this)">Produce</button>
+        <button class="category-pill" onclick="filterCategory('Pantry', this)">Pantry</button>
+    </nav>
+
     <main id="storefront" class="product-grid">
         </main>
 
