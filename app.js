@@ -1,56 +1,93 @@
+// --- Configuration ---
+const BACKEND_URL = 'https://supermarket-backend-production-3a4d.up.railway.app';
+
 // --- Local State Management ---
 let cartCount = 0;
 let currentSelectedProduct = { name: '', price: '' };
 
-// --- Modal Logic ---
+// --- DOM Elements ---
+const storefront = document.getElementById('storefront');
 const modalOverlay = document.getElementById('product-modal-overlay');
 const modalTitle = document.getElementById('modal-title');
 const modalPrice = document.getElementById('modal-price');
 const cartCountDisplay = document.getElementById('cart-count');
 const toastContainer = document.getElementById('toast-container');
 
+// --- Live Data Fetching ---
+async function fetchProducts() {
+    try {
+        const response = await fetch(`${BACKEND_URL}/api/products`);
+        const result = await response.json();
+
+        if (result.success && result.data) {
+            storefront.innerHTML = ''; // Clear any existing content
+            result.data.forEach(product => {
+                const card = createProductCard(product);
+                storefront.appendChild(card);
+            });
+        }
+    } catch (error) {
+        console.error('Error fetching live catalog:', error);
+        storefront.innerHTML = '<p style="text-align:center; grid-column: span 2;">Failed to load market items. Please refresh.</p>';
+    }
+}
+
+function createProductCard(product) {
+    const card = document.createElement('div');
+    card.classList.add('product-card');
+    
+    // Assign an emoji based on category for MVP visuals
+    let emoji = '📦';
+    if (product.category === 'Dairy') emoji = '🥛';
+    if (product.category === 'Bakery') emoji = '🍞';
+    if (product.category === 'Produce') emoji = '🍌';
+
+    // Build the touch-friendly card HTML
+    card.innerHTML = `
+        <div class="product-image">${emoji}</div>
+        <h3>${product.name}</h3>
+        <p class="product-weight">${product.weightOrVolume}</p>
+        <button class="add-btn">Add - ₹${product.price}</button>
+    `;
+
+    // Attach the modal trigger
+    card.onclick = () => openModal(product.name, `₹${product.price}`);
+    
+    return card;
+}
+
+// --- Modal Logic ---
 function openModal(productName, productPrice) {
-    // Store current selection
     currentSelectedProduct.name = productName;
     currentSelectedProduct.price = productPrice;
-
-    // Inject data into the modal UI
     modalTitle.innerText = productName;
     modalPrice.innerText = productPrice;
-
-    // Trigger the slide-up and screen blur transition
     modalOverlay.classList.add('active');
 }
 
 function closeModal() {
-    // Remove the active class to slide down and remove blur
     modalOverlay.classList.remove('active');
 }
 
 // --- Cart & Toast Logic ---
 function addToCart() {
-    // Increment cart state
     cartCount++;
     cartCountDisplay.innerText = cartCount;
-
-    // Trigger automated UI feedback
     showToast(`Added ${currentSelectedProduct.name} to cart`);
-
-    // Close the modal immediately for a frictionless feel
     closeModal();
 }
 
 function showToast(message) {
-    // Create the toast element dynamically
     const toast = document.createElement('div');
     toast.classList.add('toast');
     toast.innerText = message;
-
-    // Append to our fixed container
     toastContainer.appendChild(toast);
 
-    // Automated timing: Remove the element from the DOM after the 3-second CSS animation completes
     setTimeout(() => {
         toast.remove();
     }, 3000);
 }
+
+// --- Boot Sequence ---
+// Fetch and display live data immediately when the script loads
+fetchProducts();
