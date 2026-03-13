@@ -28,11 +28,38 @@
         </div>
     </div>
 
+    <section id="cart-view" class="cart-view">
+        <div class="cart-header">
+            <button class="back-btn" onclick="closeCart()">← Back</button>
+            <h2>Your Cart</h2>
+            <div style="width: 60px;"></div> </div>
+        
+        <div id="cart-items-container" class="cart-items">
+            </div>
+
+        <div class="cart-footer">
+            <div class="summary-row">
+                <span>Subtotal</span>
+                <span id="cart-subtotal">₹0</span>
+            </div>
+            <div class="summary-row">
+                <span>Delivery Fee</span>
+                <span id="cart-delivery">₹20</span>
+            </div>
+            <hr class="summary-divider">
+            <div class="summary-row total-row">
+                <span>Total</span>
+                <span id="cart-total">₹0</span>
+            </div>
+            <button class="primary-btn checkout-btn" onclick="placeOrder()">Place Order (Cash on Delivery)</button>
+        </div>
+    </section>
+
     <div id="toast-container"></div>
 
     <nav class="bottom-nav">
-        <button class="nav-item active">🏠 Home</button>
-        <button class="nav-item">🛒 Cart (<span id="cart-count">0</span>)</button>
+        <button class="nav-item active" onclick="closeCart()">🏠 Home</button>
+        <button class="nav-item" onclick="openCart()">🛒 Cart (<span id="cart-count">0</span>)</button>
         <button class="nav-item">👤 Profile</button>
     </nav>
 
