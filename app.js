@@ -76,13 +76,11 @@ function closeModal() {
 
 // --- Cart & Checkout Logic ---
 function addToCart() {
-    // Check if item is already in the cart
     const existingItem = cart.find(item => item._id === currentSelectedProduct._id);
     
     if (existingItem) {
-        existingItem.qty += 1; // Increase quantity
+        existingItem.qty += 1; 
     } else {
-        // Add new item with a starting quantity of 1
         cart.push({ ...currentSelectedProduct, qty: 1 });
     }
 
@@ -92,11 +90,9 @@ function addToCart() {
 }
 
 function updateCartUI() {
-    // 1. Update the bottom nav counter
     const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
     cartCountDisplay.innerText = totalItems;
 
-    // 2. Render the Cart Rows
     cartItemsContainer.innerHTML = '';
     
     if (cart.length === 0) {
@@ -128,7 +124,6 @@ function updateCartUI() {
         cartItemsContainer.appendChild(row);
     });
 
-    // 3. Update Summary Math
     cartSubtotalEl.innerText = `₹${subtotal}`;
     cartDeliveryEl.innerText = `₹${DELIVERY_FEE}`;
     cartTotalEl.innerText = `₹${subtotal + DELIVERY_FEE}`;
@@ -139,7 +134,6 @@ function adjustQty(productId, change) {
     if (itemIndex > -1) {
         cart[itemIndex].qty += change;
         
-        // Remove item if quantity drops to 0
         if (cart[itemIndex].qty <= 0) {
             cart.splice(itemIndex, 1);
         }
@@ -148,7 +142,7 @@ function adjustQty(productId, change) {
 }
 
 function openCart() {
-    updateCartUI(); // Ensure fresh data before showing
+    updateCartUI(); 
     cartView.classList.add('active');
 }
 
@@ -156,17 +150,53 @@ function closeCart() {
     cartView.classList.remove('active');
 }
 
-function placeOrder() {
+async function placeOrder() {
     if (cart.length === 0) {
         showToast('Your cart is empty!');
         return;
     }
 
-    // MVP Checkout Action: Clear the cart and celebrate
-    cart = [];
-    updateCartUI();
-    closeCart();
-    showToast('Order Placed Successfully! 🚀');
+    // 1. Calculate the final total payload
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+    const finalTotal = subtotal + DELIVERY_FEE;
+
+    // 2. Lock UI to prevent duplicate orders
+    const checkoutBtn = document.querySelector('.checkout-btn');
+    checkoutBtn.innerText = 'Processing...';
+    checkoutBtn.disabled = true;
+
+    try {
+        // 3. Transmit the order to Railway
+        const response = await fetch(`${BACKEND_URL}/api/orders`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                items: cart,
+                totalAmount: finalTotal
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // 4. Success Sequence
+            cart = [];
+            updateCartUI();
+            closeCart();
+            showToast('Order Placed Successfully! 🚀');
+        } else {
+            showToast('Failed to place order. Please try again.');
+        }
+    } catch (error) {
+        console.error('Checkout error:', error);
+        showToast('Network error. Check your connection.');
+    } finally {
+        // 5. Release UI lock
+        checkoutBtn.innerText = 'Place Order (Cash on Delivery)';
+        checkoutBtn.disabled = false;
+    }
 }
 
 function showToast(message) {
