@@ -1,9 +1,10 @@
 // --- Configuration ---
 const BACKEND_URL = 'https://supermarket-backend-production-3a4d.up.railway.app';
-const DELIVERY_FEE = 20; // Fixed flat fee
+const DELIVERY_FEE = 20;
 
 // --- Local State Management ---
-let cart = []; // Upgraded to an active memory array
+let allProducts = []; // Master memory bank for the catalog
+let cart = []; 
 let currentSelectedProduct = null;
 
 // --- DOM Elements ---
@@ -21,22 +22,47 @@ const cartSubtotalEl = document.getElementById('cart-subtotal');
 const cartDeliveryEl = document.getElementById('cart-delivery');
 const cartTotalEl = document.getElementById('cart-total');
 
-// --- Live Data Fetching ---
+// --- Live Data Fetching & Rendering ---
 async function fetchProducts() {
     try {
         const response = await fetch(`${BACKEND_URL}/api/products`);
         const result = await response.json();
 
         if (result.success && result.data) {
-            storefront.innerHTML = ''; 
-            result.data.forEach(product => {
-                const card = createProductCard(product);
-                storefront.appendChild(card);
-            });
+            allProducts = result.data; // Save to local memory
+            renderProducts(allProducts); // Render everything initially
         }
     } catch (error) {
         console.error('Error fetching live catalog:', error);
-        storefront.innerHTML = '<p style="text-align:center; grid-column: span 2;">Failed to load market items. Please refresh.</p>';
+        storefront.innerHTML = '<p style="text-align:center; grid-column: span 2; color: #94A3B8;">Failed to load market items. Please refresh.</p>';
+    }
+}
+
+function renderProducts(productsToRender) {
+    storefront.innerHTML = ''; // Clear current view
+    
+    if (productsToRender.length === 0) {
+        storefront.innerHTML = '<p style="text-align:center; grid-column: span 2; color: #94A3B8; margin-top: 40px;">No items found in this category.</p>';
+        return;
+    }
+
+    productsToRender.forEach(product => {
+        const card = createProductCard(product);
+        storefront.appendChild(card);
+    });
+}
+
+function filterCategory(category, btnElement) {
+    // 1. Update UI active states for the pills
+    document.querySelectorAll('.category-pill').forEach(btn => btn.classList.remove('active'));
+    btnElement.classList.add('active');
+
+    // 2. Filter the master memory array
+    if (category === 'All') {
+        renderProducts(allProducts);
+    } else {
+        const filtered = allProducts.filter(p => p.category === category);
+        renderProducts(filtered);
     }
 }
 
@@ -57,7 +83,6 @@ function createProductCard(product) {
         <button class="add-btn">Add - ₹${product.price}</button>
     `;
 
-    // Pass the entire product object to the modal
     card.onclick = () => openModal(product);
     return card;
 }
@@ -96,7 +121,7 @@ function updateCartUI() {
     cartItemsContainer.innerHTML = '';
     
     if (cart.length === 0) {
-        cartItemsContainer.innerHTML = '<p style="text-align:center; color:gray; margin-top:40px;">Your cart is empty.</p>';
+        cartItemsContainer.innerHTML = '<p style="text-align:center; color: #94A3B8; margin-top:40px;">Your cart is empty.</p>';
         cartSubtotalEl.innerText = '₹0';
         cartTotalEl.innerText = '₹0';
         return;
@@ -133,7 +158,6 @@ function adjustQty(productId, change) {
     const itemIndex = cart.findIndex(item => item._id === productId);
     if (itemIndex > -1) {
         cart[itemIndex].qty += change;
-        
         if (cart[itemIndex].qty <= 0) {
             cart.splice(itemIndex, 1);
         }
@@ -156,17 +180,14 @@ async function placeOrder() {
         return;
     }
 
-    // 1. Calculate the final total payload
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
     const finalTotal = subtotal + DELIVERY_FEE;
 
-    // 2. Lock UI to prevent duplicate orders
     const checkoutBtn = document.querySelector('.checkout-btn');
     checkoutBtn.innerText = 'Processing...';
     checkoutBtn.disabled = true;
 
     try {
-        // 3. Transmit the order to Railway
         const response = await fetch(`${BACKEND_URL}/api/orders`, {
             method: 'POST',
             headers: {
@@ -181,7 +202,6 @@ async function placeOrder() {
         const result = await response.json();
 
         if (result.success) {
-            // 4. Success Sequence
             cart = [];
             updateCartUI();
             closeCart();
@@ -193,8 +213,7 @@ async function placeOrder() {
         console.error('Checkout error:', error);
         showToast('Network error. Check your connection.');
     } finally {
-        // 5. Release UI lock
-        checkoutBtn.innerText = 'Place Order (Cash on Delivery)';
+        checkoutBtn.innerText = 'Place Order';
         checkoutBtn.disabled = false;
     }
 }
@@ -204,10 +223,7 @@ function showToast(message) {
     toast.classList.add('toast');
     toast.innerText = message;
     toastContainer.appendChild(toast);
-
-    setTimeout(() => {
-        toast.remove();
-    }, 3000);
+    setTimeout(() => toast.remove(), 3000);
 }
 
 // --- Boot Sequence ---
