@@ -1,6 +1,8 @@
 const BACKEND_URL = 'https://supermarket-backend-production-3a4d.up.railway.app';
 const DELIVERY_FEE = 20;
 let allProducts = []; let cart = []; let selectedDeliveryType = 'Instant';
+let trackingEventSource = null; // Memory bank for customer live socket
+
 const storefront = document.getElementById('storefront'); const skeletonGrid = document.getElementById('skeleton-grid'); const cartRibbon = document.getElementById('cart-ribbon'); const cartView = document.getElementById('cart-view'); const cartItemsContainer = document.getElementById('cart-items-container'); const toastContainer = document.getElementById('toast-container'); const trackingContent = document.getElementById('tracking-content');
 const views = { shop: document.getElementById('shop-view'), orders: document.getElementById('orders-view') }; const navBtns = { shop: document.getElementById('nav-shop'), orders: document.getElementById('nav-orders') };
 function switchView(viewName) { Object.keys(views).forEach(key => { if(key===viewName){views[key].classList.add('active'); views[key].classList.remove('hidden'); navBtns[key].classList.add('active');}else{views[key].classList.remove('active'); views[key].classList.add('hidden'); navBtns[key].classList.remove('active');} }); if(viewName==='orders')checkOrderStatus(); }
@@ -18,6 +20,45 @@ function openCart() { if(cart.length===0)return; updateGlobalCartUI(); cartView.
 function closeCart() { cartView.classList.remove('active'); }
 function setDeliveryType(type) { selectedDeliveryType = type; document.getElementById('tab-instant').classList.toggle('active', type==='Instant'); document.getElementById('tab-routine').classList.toggle('active', type==='Routine'); document.getElementById('routine-options').classList.toggle('hidden', type==='Instant'); }
 async function placeOrder() { if(cart.length===0)return; const name=document.getElementById('cust-name').value.trim(); const phone=document.getElementById('cust-phone').value.trim(); const address=document.getElementById('cust-address').value.trim(); if(!name||!phone||!address){showToast('Please fill out all delivery details!');return;} const subtotal=cart.reduce((s,i)=>s+(i.price*i.qty),0); const finalTotal=subtotal+DELIVERY_FEE; const scheduleTime = selectedDeliveryType === 'Routine' ? document.getElementById('schedule-time').value : 'ASAP'; const checkoutBtn=document.querySelector('.checkout-btn'); checkoutBtn.innerText='Processing...'; checkoutBtn.disabled=true; try { const res=await fetch(`${BACKEND_URL}/api/orders`,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({customerName:name, customerPhone:phone, deliveryAddress:address, items:cart, totalAmount:finalTotal, deliveryType:selectedDeliveryType, scheduleTime:scheduleTime}) }); const result=await res.json(); if(result.success){ localStorage.setItem('dailyPick_activeOrderId', result.orderId); cart=[]; document.getElementById('cust-name').value=''; document.getElementById('cust-phone').value=''; document.getElementById('cust-address').value=''; setDeliveryType('Instant'); renderProducts(allProducts); updateGlobalCartUI(); closeCart(); switchView('orders'); showToast('Order Received! 🚀'); }else{ showToast('Failed to place order.'); } }catch(e){ showToast('Network error.'); }finally{ checkoutBtn.innerText='Place Order'; checkoutBtn.disabled=false; } }
-async function checkOrderStatus() { const savedOrderId=localStorage.getItem('dailyPick_activeOrderId'); if(!savedOrderId){trackingContent.innerHTML='<p class="empty-state">You have no active orders right now.</p>';return;} trackingContent.innerHTML='<p class="empty-state">Fetching live status...</p>'; try { const res=await fetch(`${BACKEND_URL}/api/orders/${savedOrderId}`); const result=await res.json(); if(result.success){ const order=result.data; const timeString=new Date(order.createdAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); const scheduleBadge = order.deliveryType === 'Routine' ? `<div style="margin-top:12px; font-size:12px; color:#64748B; font-weight:700;">📅 Routine: ${order.scheduleTime}</div>` : `<div style="margin-top:12px; font-size:12px; color:#16A34A; font-weight:700;">⚡ Instant Delivery</div>`; trackingContent.innerHTML=`<div class="tracking-card"><h3>Order #${(order._id).toString().slice(-4).toUpperCase()}</h3><p>Placed at ${timeString}</p><div class="status-badge ${order.status==='Dispatched'?'dispatched':''}">${order.status}</div>${scheduleBadge}<div style="margin-top:24px; font-size:14px; font-weight:700;">To Pay: ₹${order.totalAmount} (COD)</div></div>`; }else{ trackingContent.innerHTML='<p class="empty-state">Order details could not be found.</p>'; } }catch(e){ trackingContent.innerHTML='<p class="empty-state">Network error checking status.</p>'; } }
+
+async function checkOrderStatus() { 
+    const savedOrderId = localStorage.getItem('dailyPick_activeOrderId'); 
+    if(!savedOrderId){trackingContent.innerHTML='<p class="empty-state">You have no active orders right now.</p>';return;} 
+    
+    trackingContent.innerHTML='<p class="empty-state">Fetching live status...</p>'; 
+    
+    try { 
+        const res = await fetch(`${BACKEND_URL}/api/orders/${savedOrderId}`); 
+        const result = await res.json(); 
+        
+        if(result.success){ 
+            const order = result.data; 
+            const timeString = new Date(order.createdAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); 
+            const scheduleBadge = order.deliveryType === 'Routine' ? `<div style="margin-top:12px; font-size:12px; color:#64748B; font-weight:700;">📅 Routine: ${order.scheduleTime}</div>` : `<div style="margin-top:12px; font-size:12px; color:#16A34A; font-weight:700;">⚡ Instant Delivery</div>`; 
+            
+            trackingContent.innerHTML=`<div class="tracking-card"><h3>Order #${(order._id).toString().slice(-4).toUpperCase()}</h3><p>Placed at ${timeString}</p><div class="status-badge ${order.status==='Dispatched'?'dispatched':''}">${order.status}</div>${scheduleBadge}<div style="margin-top:24px; font-size:14px; font-weight:700;">To Pay: ₹${order.totalAmount} (COD)</div></div>`; 
+            
+            // Connect Live SSE if order is not dispatched yet
+            if(order.status !== 'Dispatched' && !trackingEventSource) {
+                trackingEventSource = new EventSource(`${BACKEND_URL}/api/orders/stream/customer/${savedOrderId}`);
+                trackingEventSource.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'STATUS_UPDATE') {
+                        showToast('🚚 Your order has been dispatched!');
+                        trackingEventSource.close(); // Close radio channel
+                        trackingEventSource = null;
+                        checkOrderStatus(); // Redraw UI with green badge
+                    }
+                };
+            }
+
+        } else { 
+            trackingContent.innerHTML='<p class="empty-state">Order details could not be found.</p>'; 
+        } 
+    }catch(e){ 
+        trackingContent.innerHTML='<p class="empty-state">Network error checking status.</p>'; 
+    } 
+}
+
 function showToast(message) { const toast=document.createElement('div'); toast.classList.add('toast'); toast.innerText=message; toastContainer.appendChild(toast); setTimeout(()=>toast.remove(),2500); }
 fetchProducts();
