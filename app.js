@@ -1,4 +1,4 @@
-const BACKEND_URL = 'https://dailypick-backend-production.up.railway.app';
+const BACKEND_URL = 'https://dailypick-backend-production-05d6.up.railway.app';
 const DELIVERY_FEE = 20;
 let allProducts = []; let cart = []; let selectedDeliveryType = 'Instant';
 let trackingEventSource = null; // Memory bank for customer live socket
