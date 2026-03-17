@@ -6,23 +6,40 @@ let trackingEventSource = null;
 const storefront = document.getElementById('storefront'); const skeletonGrid = document.getElementById('skeleton-grid'); const cartRibbon = document.getElementById('cart-ribbon'); const cartView = document.getElementById('cart-view'); const cartItemsContainer = document.getElementById('cart-items-container'); const toastContainer = document.getElementById('toast-container'); const trackingContent = document.getElementById('tracking-content');
 const views = { shop: document.getElementById('shop-view'), orders: document.getElementById('orders-view') }; const navBtns = { shop: document.getElementById('nav-shop'), orders: document.getElementById('nav-orders') };
 
-function switchView(viewName) { Object.keys(views).forEach(key => { if(key===viewName){views[key].classList.add('active'); views[key].classList.remove('hidden'); navBtns[key].classList.add('active');}else{views[key].classList.remove('active'); views[key].classList.add('hidden'); navBtns[key].classList.remove('active');} }); if(viewName==='orders')checkOrderStatus(); }
+// Dictionary to map backend categories to visual emojis/colors for the grid
+const CATEGORY_IMAGES = {
+    'Dairy, Bread & Eggs': { emoji: '🥛', color: '#e0f2fe' },
+    'Snacks & Drinks': { emoji: '🥤', color: '#ffedd5' },
+    'Grocery & Kitchen': { emoji: '🌾', color: '#dcfce7' },
+    'Beauty & Personal Care': { emoji: '🧴', color: '#fce7f3' },
+    'Home Essentials': { emoji: '🧼', color: '#f3e8ff' }
+};
 
-// --- NEW: FETCH CATEGORIES FOR NAV BAR ---
+function switchView(viewName) { Object.keys(views).forEach(key => { if(key===viewName){views[key].classList.add('active'); views[key].classList.remove('hidden'); document.getElementById(`nav-${key}`).classList.add('active');}else{views[key].classList.remove('active'); views[key].classList.add('hidden'); document.getElementById(`nav-${key}`).classList.remove('active');} }); if(viewName==='orders')checkOrderStatus(); }
+
+// --- UPDATED: RENDERS IMAGE GRID INSTEAD OF HORIZONTAL PILLS ---
 async function fetchCategories() {
     try {
         const res = await fetch(`${BACKEND_URL}/api/categories`);
         const result = await res.json();
         if (result.success) {
             allCategories = result.data;
-            const nav = document.getElementById('category-nav');
-            nav.innerHTML = `<button class="category-pill active" onclick="filterCategory('All', this)">All</button>`;
+            const grid = document.getElementById('categories-grid');
+            grid.innerHTML = ''; // Clear default
+            
             allCategories.forEach(cat => {
-                const btn = document.createElement('button');
-                btn.className = 'category-pill';
-                btn.innerText = cat.name;
-                btn.onclick = function() { filterCategory(cat.name, this); };
-                nav.appendChild(btn);
+                const visual = CATEGORY_IMAGES[cat.name] || { emoji: '🛍️', color: '#f1f5f9' };
+                
+                const card = document.createElement('div');
+                card.className = 'category-card';
+                card.innerHTML = `
+                    <div class="category-img-wrapper" style="background-color: ${visual.color}">
+                        ${visual.emoji}
+                    </div>
+                    <p>${cat.name}</p>
+                `;
+                card.onclick = () => filterCategory(cat.name);
+                grid.appendChild(card);
             });
         }
     } catch (e) { console.error("Error fetching categories"); }
@@ -47,12 +64,10 @@ function renderProducts(productsToRender) {
     
     productsToRender.forEach(product => { 
         const card = document.createElement('div'); card.classList.add('product-card'); 
-        
-        // Display lowest price and weight of the first variant for the storefront display
         const displayVariant = (product.variants && product.variants.length > 0) ? product.variants[0] : { price: 0, weightOrVolume: 'N/A' };
 
         let imageContent = product.imageUrl 
-            ? `<img src="${product.imageUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:8px;">`
+            ? `<img src="${product.imageUrl}" style="width:100%; height:100%; object-fit:contain; border-radius:8px;">`
             : `<div style="font-size:44px; display:flex; align-items:center; justify-content:center; width:100%; height:100%;">📦</div>`;
 
         card.innerHTML = `<div><div class="product-image" style="padding:0; overflow:hidden;">${imageContent}</div><div class="product-info"><h3>${product.name}</h3><p class="product-weight">${displayVariant.weightOrVolume}</p></div></div><div class="price-action-row"><div class="product-price">₹${displayVariant.price}</div><div class="action-container" id="action-container-${product._id}"></div></div>`; 
@@ -60,14 +75,27 @@ function renderProducts(productsToRender) {
     }); 
 }
 
-function filterCategory(category, btnElement) { document.getElementById('search-input').value=''; document.querySelectorAll('.category-pill').forEach(btn=>btn.classList.remove('active')); btnElement.classList.add('active'); if(category==='All'){renderProducts(allProducts);}else{renderProducts(allProducts.filter(p=>p.category===category));} }
+function filterCategory(category) { 
+    document.getElementById('search-input').value=''; 
+    const title = document.getElementById('product-grid-title');
+    
+    if(category==='All') {
+        title.innerText = 'All Products';
+        renderProducts(allProducts);
+    } else {
+        title.innerText = category;
+        renderProducts(allProducts.filter(p=>p.category===category));
+    }
+    
+    // Smooth scroll down to the product section so user sees the change
+    title.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
-// --- UPDATED: SEARCH NOW CHECKS INVISIBLE TAGS ---
 function handleSearch(event) { 
     const query=event.target.value.toLowerCase().trim(); 
-    if(!query){ filterCategory('All', document.querySelector('.category-pill')); return; } 
-    document.querySelectorAll('.category-pill').forEach(btn=>btn.classList.remove('active')); 
+    if(!query){ filterCategory('All'); return; } 
     
+    document.getElementById('product-grid-title').innerText = `Search Results`;
     renderProducts(allProducts.filter(p => {
         const nameMatch = isFuzzyMatch(query, p.name.toLowerCase());
         const catMatch = p.category.toLowerCase().includes(query);
@@ -96,7 +124,7 @@ function updateGlobalCartUI() {
     if(cart.length===0){ cartItemsContainer.innerHTML='<p style="text-align:center; color:#94A3B8; margin-top:40px;">Your cart is empty.</p>'; document.getElementById('cart-subtotal').innerText='₹0'; document.getElementById('cart-total').innerText='₹0'; return; } 
     cart.forEach(item=>{ 
         const row=document.createElement('div'); row.classList.add('cart-item-row'); 
-        const thumb = item.imageUrl ? `<img src="${item.imageUrl}" style="width:32px; height:32px; border-radius:6px; object-fit:cover;">` : `<div style="font-size:24px;">🏷️</div>`;
+        const thumb = item.imageUrl ? `<img src="${item.imageUrl}" style="width:32px; height:32px; border-radius:6px; object-fit:contain;">` : `<div style="font-size:24px;">📦</div>`;
         row.innerHTML=`<div style="display:flex; align-items:center; justify-content:center; width:32px;">${thumb}</div><div class="cart-item-info"><div class="cart-item-title">${item.name}</div><div class="cart-item-price">₹${item.currentPrice}</div></div><div class="action-container" style="width:72px;"><div class="stepper"><button onclick="adjustQty('${item._id}',-1)">−</button><span>${item.qty}</span><button onclick="adjustQty('${item._id}',1)">+</button></div></div>`; 
         cartItemsContainer.appendChild(row); 
     }); 
