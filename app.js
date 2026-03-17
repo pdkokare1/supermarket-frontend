@@ -90,6 +90,19 @@ function filterCategory(category) {
     title.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+// --- NEW: FUNCTION TO FILTER BY PROMO BANNERS ---
+function filterByTag(tag, displayTitle) {
+    document.getElementById('search-input').value = ''; 
+    const title = document.getElementById('product-grid-title');
+    title.innerText = displayTitle;
+    
+    renderProducts(allProducts.filter(p => {
+        return p.searchTags && p.searchTags.toLowerCase().includes(tag.toLowerCase());
+    }));
+    
+    title.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 function handleSearch(event) { 
     const query=event.target.value.toLowerCase().trim(); 
     if(!query){ filterCategory('All'); return; } 
