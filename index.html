@@ -13,31 +13,78 @@
 </head>
 <body>
     <header class="app-header">
-        <div class="header-brand">
-            <h1>DAILYPICK</h1>
-            <p class="header-subtitle">Fresh groceries, sorted.</p>
+        <div class="top-bar">
+            <div class="delivery-info">
+                <div class="delivery-time-container">
+                    <h2>Blinkit in</h2>
+                    <h1 class="delivery-time">18 minutes</h1>
+                </div>
+                <p class="delivery-location">Sadhu Vasvani Nagar, Aundh ▼</p>
+            </div>
+            <div class="user-actions">
+                <div class="wallet-icon">💳 ₹0</div>
+                <div class="profile-icon">👤</div>
+            </div>
         </div>
+        
         <div class="search-container">
-            <input type="text" id="search-input" class="search-input" placeholder="Search 'Milk', 'Bread', 'Eggs'..." oninput="handleSearch(event)">
+            <div class="search-bar-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="search-input" class="search-input" placeholder="Search &quot;pet food&quot;" oninput="handleSearch(event)">
+                <span class="mic-icon">🎤</span>
+            </div>
+        </div>
+
+        <div class="quick-nav">
+            <div class="quick-nav-item active"><span class="nav-ico">🛍️</span>All</div>
+            <div class="quick-nav-item"><span class="nav-ico">🌙</span>Ramzan</div>
+            <div class="quick-nav-item"><span class="nav-ico">🎧</span>Electronics</div>
+            <div class="quick-nav-item"><span class="nav-ico">💄</span>Beauty</div>
+            <div class="quick-nav-item"><span class="nav-ico">🏺</span>Decor</div>
         </div>
     </header>
 
     <article id="shop-view" class="view-section active">
-        <nav id="category-nav" class="category-nav">
-            </nav>
+        
+        <section class="promo-banners">
+            <div class="promo-card" style="background: linear-gradient(135deg, #eab308, #d97706); color: white;">
+                <p style="font-size: 10px; font-weight: 800; letter-spacing: 1px;">NEWLY LAUNCHED</p>
+                <h3 style="margin-top: 4px;">Whey Protein</h3>
+                <p style="margin-top: auto; font-size: 11px;">✦ For You ✦</p>
+            </div>
+            <div class="promo-card" style="background: linear-gradient(135deg, #065f46, #047857); color: white;">
+                <p style="font-size: 10px; font-weight: 800;">FEATURED</p>
+                <h3 style="margin-top: 4px;">Ramzan Mubarak</h3>
+            </div>
+            <div class="promo-card" style="background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e;">
+                <p style="font-size: 10px; font-weight: 800;">FEATURED</p>
+                <h3 style="margin-top: 4px;">Summer Coolers</h3>
+            </div>
+        </section>
 
-        <main id="skeleton-grid" class="product-grid">
-            <div class="skeleton-card"><div class="skel-img"></div><div class="skel-text"></div><div class="skel-btn"></div></div>
-            <div class="skeleton-card"><div class="skel-img"></div><div class="skel-text"></div><div class="skel-btn"></div></div>
-            <div class="skeleton-card"><div class="skel-img"></div><div class="skel-text"></div><div class="skel-btn"></div></div>
-            <div class="skeleton-card"><div class="skel-img"></div><div class="skel-text"></div><div class="skel-btn"></div></div>
-        </main>
+        <section class="category-section">
+            <h2 class="section-title">Shop by Category</h2>
+            <div id="categories-grid" class="categories-grid">
+                </div>
+        </section>
 
-        <main id="storefront" class="product-grid hidden"></main>
-    </article>
+        <section class="products-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 16px;">
+                <h2 class="section-title" id="product-grid-title" style="margin: 0;">All Products</h2>
+                <button onclick="filterCategory('All')" style="background: none; border: none; color: var(--primary); font-weight: 700; font-size: 12px;">View All</button>
+            </div>
+            
+            <main id="skeleton-grid" class="product-grid">
+                <div class="skeleton-card"><div class="skel-img"></div><div class="skel-text"></div><div class="skel-btn"></div></div>
+                <div class="skeleton-card"><div class="skel-img"></div><div class="skel-text"></div><div class="skel-btn"></div></div>
+            </main>
+            <main id="storefront" class="product-grid hidden"></main>
+        </section>
+        
+        <div style="height: 40px;"></div> </article>
 
     <article id="orders-view" class="view-section hidden">
-        <main class="tracking-container">
+        <main class="tracking-container" style="padding-top: 100px;">
             <div class="tracking-header">
                 <h2>Active Order</h2>
                 <button class="refresh-btn" onclick="checkOrderStatus()">↻ Refresh</button>
@@ -68,7 +115,7 @@
         <div class="schedule-section">
             <h3 class="delivery-title" style="margin-bottom: 12px;">Delivery Speed</h3>
             <div class="delivery-tabs">
-                <button id="tab-instant" class="del-tab active" onclick="setDeliveryType('Instant')">⚡ Instant</button>
+                <button id="tab-instant" class="del-tab active" onclick="setDeliveryType('Instant')">⚡ 18 Mins</button>
                 <button id="tab-routine" class="del-tab" onclick="setDeliveryType('Routine')">📅 Daily Routine</button>
             </div>
             <div id="routine-options" class="hidden" style="margin-top: 16px;">
@@ -99,8 +146,10 @@
     <div id="toast-container"></div>
 
     <nav class="bottom-nav">
-        <button id="nav-shop" class="nav-item active" onclick="switchView('shop')"><span class="nav-icon">⬡</span><span class="nav-label">Shop</span></button>
-        <button id="nav-orders" class="nav-item" onclick="switchView('orders')"><span class="nav-icon">📦</span><span class="nav-label">Orders</span></button>
+        <button id="nav-shop" class="nav-item active" onclick="switchView('shop')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
+        <button id="nav-orders" class="nav-item" onclick="switchView('orders')"><span class="nav-icon">🛍️</span><span class="nav-label">Order Again</span></button>
+        <button class="nav-item" onclick="window.scrollTo({top: 0, behavior: 'smooth'})"><span class="nav-icon">🗂️</span><span class="nav-label">Categories</span></button>
+        <button class="nav-item"><span class="nav-icon">🖨️</span><span class="nav-label">Print</span></button>
     </nav>
 
     <script src="app.js"></script>
