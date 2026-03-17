@@ -16,10 +16,10 @@
         <div class="top-bar">
             <div class="delivery-info">
                 <div class="delivery-time-container">
-                    <h2>DailyPick in</h2>
+                    <h2>DailyPick</h2>
                     <h1 class="delivery-time">18 minutes</h1>
                 </div>
-                <p class="delivery-location">Sadhu Vasvani Nagar, Aundh ▼</p>
+                <p class="delivery-location">Address ▼</p>
             </div>
             <div class="user-actions">
                 <div class="wallet-icon">💳 ₹0</div>
@@ -37,7 +37,7 @@
 
         <div class="quick-nav">
             <div class="quick-nav-item active" onclick="filterCategory('All')"><span class="nav-ico">🛍️</span>All</div>
-            <div class="quick-nav-item"><span class="nav-ico">🔥</span>Deals</div>
+            <div class="quick-nav-item" onclick="filterByTag('promo-snack', 'Hot Deals')"><span class="nav-ico">🔥</span>Deals</div>
             <div class="quick-nav-item" onclick="filterCategory('Grocery & Kitchen')"><span class="nav-ico">🛒</span>Groceries</div>
             <div class="quick-nav-item" onclick="filterCategory('Personal Care')"><span class="nav-ico">🧴</span>Care</div>
             <div class="quick-nav-item" onclick="filterCategory('Cleaning Essentials')"><span class="nav-ico">🏠</span>Home</div>
@@ -47,18 +47,20 @@
     <article id="shop-view" class="view-section active">
         
         <section class="promo-banners">
-            <div class="promo-card" style="background: linear-gradient(135deg, #eab308, #d97706); color: white;">
+            <div class="promo-card" style="background: linear-gradient(135deg, #eab308, #d97706); color: white; cursor: pointer;" onclick="filterByTag('promo-morning', 'Morning Fresh')">
                 <p style="font-size: 10px; font-weight: 800; letter-spacing: 1px;">NEW ARRIVALS</p>
                 <h3 style="margin-top: 4px;">Morning Fresh</h3>
                 <p style="margin-top: auto; font-size: 11px;">✦ Shop Dairy ✦</p>
             </div>
-            <div class="promo-card" style="background: linear-gradient(135deg, #065f46, #047857); color: white;">
+            <div class="promo-card" style="background: linear-gradient(135deg, #065f46, #047857); color: white; cursor: pointer;" onclick="filterByTag('promo-snack', 'Snack Party')">
                 <p style="font-size: 10px; font-weight: 800;">WEEKEND SPECIAL</p>
                 <h3 style="margin-top: 4px;">Snack Party</h3>
+                <p style="margin-top: auto; font-size: 11px;">✦ Munchies ✦</p>
             </div>
-            <div class="promo-card" style="background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e;">
+            <div class="promo-card" style="background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e; cursor: pointer;" onclick="filterByTag('promo-summer', 'Summer Coolers')">
                 <p style="font-size: 10px; font-weight: 800;">FEATURED</p>
                 <h3 style="margin-top: 4px;">Summer Coolers</h3>
+                <p style="margin-top: auto; font-size: 11px;">✦ Refreshing ✦</p>
             </div>
         </section>
 
@@ -71,7 +73,7 @@
         <section class="products-section">
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 16px;">
                 <h2 class="section-title" id="product-grid-title" style="margin: 0;">All Products</h2>
-                <button onclick="filterCategory('All')" style="background: none; border: none; color: var(--primary); font-weight: 700; font-size: 12px;">View All</button>
+                <button onclick="filterCategory('All')" style="background: none; border: none; color: var(--primary); font-weight: 700; font-size: 12px; cursor: pointer;">View All</button>
             </div>
             
             <main id="skeleton-grid" class="product-grid">
