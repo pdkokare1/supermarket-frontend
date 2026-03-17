@@ -8,16 +8,16 @@ const views = { shop: document.getElementById('shop-view'), orders: document.get
 
 // Dictionary to map backend categories to visual emojis/colors for the grid
 const CATEGORY_IMAGES = {
-    'Dairy, Bread & Eggs': { emoji: '🥛', color: '#e0f2fe' },
-    'Snacks & Drinks': { emoji: '🥤', color: '#ffedd5' },
-    'Grocery & Kitchen': { emoji: '🌾', color: '#dcfce7' },
-    'Beauty & Personal Care': { emoji: '🧴', color: '#fce7f3' },
-    'Home Essentials': { emoji: '🧼', color: '#f3e8ff' }
+    'Dairy & Breakfast': { emoji: '🥛', color: '#e0f2fe' },
+    'Snacks & Munchies': { emoji: '🍿', color: '#ffedd5' },
+    'Cold Drinks & Juices': { emoji: '🥤', color: '#dcfce7' },
+    'Personal Care': { emoji: '🧴', color: '#fce7f3' },
+    'Cleaning Essentials': { emoji: '🧽', color: '#f3e8ff' },
+    'Grocery & Kitchen': { emoji: '🌾', color: '#fef3c7' }
 };
 
 function switchView(viewName) { Object.keys(views).forEach(key => { if(key===viewName){views[key].classList.add('active'); views[key].classList.remove('hidden'); document.getElementById(`nav-${key}`).classList.add('active');}else{views[key].classList.remove('active'); views[key].classList.add('hidden'); document.getElementById(`nav-${key}`).classList.remove('active');} }); if(viewName==='orders')checkOrderStatus(); }
 
-// --- UPDATED: RENDERS IMAGE GRID INSTEAD OF HORIZONTAL PILLS ---
 async function fetchCategories() {
     try {
         const res = await fetch(`${BACKEND_URL}/api/categories`);
@@ -25,7 +25,7 @@ async function fetchCategories() {
         if (result.success) {
             allCategories = result.data;
             const grid = document.getElementById('categories-grid');
-            grid.innerHTML = ''; // Clear default
+            grid.innerHTML = ''; 
             
             allCategories.forEach(cat => {
                 const visual = CATEGORY_IMAGES[cat.name] || { emoji: '🛍️', color: '#f1f5f9' };
@@ -87,7 +87,6 @@ function filterCategory(category) {
         renderProducts(allProducts.filter(p=>p.category===category));
     }
     
-    // Smooth scroll down to the product section so user sees the change
     title.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
