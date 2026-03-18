@@ -124,3 +124,29 @@ body { background-color: var(--bg-color); color: var(--text-main); padding-botto
 .nav-label { font-size: 10px; font-weight: 700; }
 .nav-item.active .nav-icon { filter: grayscale(0%); opacity: 1; }
 .nav-item.active .nav-label { color: #000; }
+
+
+
+/* --- FOMO LOW STOCK BADGE --- */
+.fomo-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: #FEF2F2;
+    color: #DC2626;
+    border: 1px solid #FECACA;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 8px rgba(220, 38, 38, 0.15);
+    animation: pulseRed 2s infinite;
+    z-index: 5;
+}
+@keyframes pulseRed {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
