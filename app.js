@@ -39,7 +39,7 @@ const CATEGORY_IMAGES = {
 // --- VIEW MANAGEMENT ---
 function switchView(viewName) { 
     Object.keys(views).forEach(key => { 
-        if(key === viewName) {
+        if (key === viewName) {
             views[key].classList.add('active'); 
             views[key].classList.remove('hidden'); 
             document.getElementById(`nav-${key}`).classList.add('active');
@@ -50,7 +50,7 @@ function switchView(viewName) {
         } 
     }); 
     
-    if(viewName === 'orders') {
+    if (viewName === 'orders') {
         checkOrderStatus(); 
     }
 }
@@ -60,6 +60,7 @@ async function fetchCategories() {
     try {
         const res = await fetch(`${BACKEND_URL}/api/categories`);
         const result = await res.json();
+        
         if (result.success) {
             allCategories = result.data;
             const grid = document.getElementById('categories-grid');
@@ -70,7 +71,9 @@ async function fetchCategories() {
                 const card = document.createElement('div'); 
                 card.className = 'category-card';
                 card.innerHTML = `
-                    <div class="category-img-wrapper" style="background-color: ${visual.color}">${visual.emoji}</div>
+                    <div class="category-img-wrapper" style="background-color: ${visual.color}">
+                        ${visual.emoji}
+                    </div>
                     <p>${cat.name}</p>
                 `;
                 card.onclick = () => filterCategory(cat.name);
@@ -86,7 +89,8 @@ async function fetchProducts() {
     try { 
         const res = await fetch(`${BACKEND_URL}/api/products`); 
         const result = await res.json(); 
-        if(result.success && result.data) { 
+        
+        if (result.success && result.data) { 
             allProducts = result.data; 
             skeletonGrid.classList.add('hidden'); 
             storefront.classList.remove('hidden'); 
@@ -101,7 +105,7 @@ async function fetchProducts() {
 function renderProducts(productsToRender) { 
     storefront.innerHTML = ''; 
     
-    if(productsToRender.length === 0) { 
+    if (productsToRender.length === 0) { 
         storefront.innerHTML = '<p style="grid-column:span 2;text-align:center;color:#94A3B8;margin-top:40px;">No products found.</p>'; 
         return; 
     } 
@@ -152,13 +156,14 @@ function filterCategory(category) {
     document.getElementById('search-input').value = ''; 
     const title = document.getElementById('product-grid-title');
     
-    if(category === 'All') { 
+    if (category === 'All') { 
         title.innerText = 'All Products'; 
         renderProducts(allProducts); 
     } else { 
         title.innerText = category; 
         renderProducts(allProducts.filter(p => p.category === category)); 
     }
+    
     title.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -170,12 +175,14 @@ function filterByTag(tag, displayTitle) {
     renderProducts(allProducts.filter(p => { 
         return p.searchTags && p.searchTags.toLowerCase().includes(tag.toLowerCase()); 
     }));
+    
     title.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function handleSearch(event) { 
     const query = event.target.value.toLowerCase().trim(); 
-    if(!query) { 
+    
+    if (!query) { 
         filterCategory('All'); 
         return; 
     } 
@@ -190,29 +197,34 @@ function handleSearch(event) {
 }
 
 function isFuzzyMatch(query, target) { 
-    if(target.includes(query)) return true; 
+    if (target.includes(query)) return true; 
     let qIdx = 0; 
-    for(let i = 0; i < target.length; i++) { 
-        if(target[i] === query[qIdx]) qIdx++; 
-        if(qIdx === query.length) return true; 
+    
+    for (let i = 0; i < target.length; i++) { 
+        if (target[i] === query[qIdx]) qIdx++; 
+        if (qIdx === query.length) return true; 
     } 
-    if(query.length > 2) { 
+    
+    if (query.length > 2) { 
         const words = target.split(' '); 
-        for(let word of words) { 
-            if(calculateLevenshtein(query, word) <= (query.length <= 4 ? 1 : 2)) return true; 
+        for (let word of words) { 
+            if (calculateLevenshtein(query, word) <= (query.length <= 4 ? 1 : 2)) return true; 
         } 
     } 
+    
     return false; 
 }
 
 function calculateLevenshtein(a, b) { 
-    if(a.length === 0) return b.length; 
-    if(b.length === 0) return a.length; 
+    if (a.length === 0) return b.length; 
+    if (b.length === 0) return a.length; 
+    
     const m = Array(a.length + 1).fill(null).map(() => Array(b.length + 1).fill(null)); 
-    for(let i = 0; i <= a.length; i++) m[i][0] = i; 
-    for(let j = 0; j <= b.length; j++) m[0][j] = j; 
-    for(let i = 1; i <= a.length; i++) { 
-        for(let j = 1; j <= b.length; j++) { 
+    for (let i = 0; i <= a.length; i++) m[i][0] = i; 
+    for (let j = 0; j <= b.length; j++) m[0][j] = j; 
+    
+    for (let i = 1; i <= a.length; i++) { 
+        for (let j = 1; j <= b.length; j++) { 
             m[i][j] = Math.min(
                 m[i][j-1] + 1,
                 m[i-1][j] + 1,
@@ -226,7 +238,7 @@ function calculateLevenshtein(a, b) {
 // --- CART LOGIC ---
 function quickAdd(productId) { 
     const p = allProducts.find(p => p._id === productId); 
-    if(!p) return; 
+    if (!p) return; 
     
     const displayVariant = (p.variants && p.variants.length > 0) ? p.variants[0] : { price: 0, weightOrVolume: 'N/A' }; 
     cart.push({...p, qty: 1, currentPrice: displayVariant.price }); 
@@ -237,22 +249,24 @@ function quickAdd(productId) {
 
 function adjustQty(productId, change) { 
     const idx = cart.findIndex(i => i._id === productId); 
-    if(idx > -1) { 
+    
+    if (idx > -1) { 
         cart[idx].qty += change; 
-        if(cart[idx].qty <= 0) cart.splice(idx, 1); 
+        if (cart[idx].qty <= 0) cart.splice(idx, 1); 
     } 
+    
     updateCardActionUI(productId); 
     updateGlobalCartUI(); 
 }
 
 function updateCardActionUI(productId) { 
     const container = document.getElementById(`action-container-${productId}`); 
-    if(!container) return; 
+    if (!container) return; 
     
     const item = cart.find(i => i._id === productId); 
     const qty = item ? item.qty : 0; 
     
-    if(qty === 0) { 
+    if (qty === 0) { 
         container.innerHTML = `<button class="add-btn" onclick="quickAdd('${productId}')">ADD</button>`; 
     } else { 
         container.innerHTML = `
@@ -269,7 +283,7 @@ function updateGlobalCartUI() {
     const totalItems = cart.reduce((s, i) => s + i.qty, 0); 
     const subtotal = cart.reduce((s, i) => s + (i.currentPrice * i.qty), 0); 
     
-    if(totalItems > 0) { 
+    if (totalItems > 0) { 
         document.getElementById('ribbon-items-count').innerText = `${totalItems} ITEM${totalItems > 1 ? 'S' : ''}`; 
         document.getElementById('ribbon-total-price').innerText = `₹${subtotal}`; 
         cartRibbon.classList.remove('hidden'); 
@@ -279,7 +293,7 @@ function updateGlobalCartUI() {
     
     cartItemsContainer.innerHTML = ''; 
     
-    if(cart.length === 0) { 
+    if (cart.length === 0) { 
         cartItemsContainer.innerHTML = '<p style="text-align:center; color:#94A3B8; margin-top:40px;">Your cart is empty.</p>'; 
         document.getElementById('cart-subtotal').innerText = '₹0'; 
         document.getElementById('cart-total').innerText = '₹0'; 
@@ -316,7 +330,7 @@ function updateGlobalCartUI() {
 }
 
 function openCart() { 
-    if(cart.length === 0) return; 
+    if (cart.length === 0) return; 
     updateGlobalCartUI(); 
     cartView.classList.add('active'); 
 }
@@ -334,13 +348,13 @@ function setDeliveryType(type) {
 
 // --- ORDER PROCESSING & TRACKING ---
 async function placeOrder() { 
-    if(cart.length === 0) return; 
+    if (cart.length === 0) return; 
     
     const name = document.getElementById('cust-name').value.trim(); 
     const phone = document.getElementById('cust-phone').value.trim(); 
     const address = document.getElementById('cust-address').value.trim(); 
     
-    if(!name || !phone || !address) {
+    if (!name || !phone || !address) {
         showToast('Please fill out all delivery details!');
         return;
     } 
@@ -370,7 +384,7 @@ async function placeOrder() {
         
         const result = await res.json(); 
         
-        if(result.success) { 
+        if (result.success) { 
             localStorage.setItem('dailyPick_activeOrderId', result.orderId); 
             cart = []; 
             document.getElementById('cust-name').value = ''; 
@@ -395,7 +409,8 @@ async function placeOrder() {
 
 async function checkOrderStatus() { 
     const savedOrderId = localStorage.getItem('dailyPick_activeOrderId'); 
-    if(!savedOrderId) {
+    
+    if (!savedOrderId) {
         trackingContent.innerHTML = '<p class="empty-state">You have no active orders right now.</p>';
         return;
     } 
@@ -406,7 +421,7 @@ async function checkOrderStatus() {
         const res = await fetch(`${BACKEND_URL}/api/orders/${savedOrderId}`); 
         const result = await res.json(); 
         
-        if(result.success) { 
+        if (result.success) { 
             const order = result.data; 
             const timeString = new Date(order.createdAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); 
             
@@ -424,7 +439,7 @@ async function checkOrderStatus() {
                 </div>
             `; 
             
-            if(order.status !== 'Dispatched' && !trackingEventSource) {
+            if (order.status !== 'Dispatched' && !trackingEventSource) {
                 trackingEventSource = new EventSource(`${BACKEND_URL}/api/orders/stream/customer/${savedOrderId}`);
                 trackingEventSource.onmessage = (event) => { 
                     const data = JSON.parse(event.data); 
