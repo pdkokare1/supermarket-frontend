@@ -26,7 +26,6 @@ const navBtns = {
     orders: document.getElementById('nav-orders') 
 };
 
-// Category UI Configuration
 const CATEGORY_IMAGES = {
     'Dairy & Breakfast': { emoji: '🥛', color: '#e0f2fe' },
     'Snacks & Munchies': { emoji: '🍿', color: '#ffedd5' },
@@ -36,7 +35,24 @@ const CATEGORY_IMAGES = {
     'Grocery & Kitchen': { emoji: '🌾', color: '#fef3c7' }
 };
 
-// --- VIEW MANAGEMENT ---
+// --- NEW: Front-End API Wrapper to attach Token (future-proofing Customer Auth) ---
+async function storeFetchWithAuth(url, options = {}) {
+    const token = localStorage.getItem('dailyPick_customerToken'); 
+    options.headers = options.headers || {};
+    
+    if (token) {
+        options.headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    const response = await fetch(url, options);
+    
+    if (response.status === 401 || response.status === 403) {
+        console.warn('Unauthorized. Feature may require login.', url);
+    }
+    
+    return response;
+}
+
 function switchView(viewName) { 
     Object.keys(views).forEach(key => { 
         if (key === viewName) {
@@ -55,10 +71,9 @@ function switchView(viewName) {
     }
 }
 
-// --- DATA FETCHING ---
 async function fetchCategories() {
     try {
-        const res = await fetch(`${BACKEND_URL}/api/categories`);
+        const res = await storeFetchWithAuth(`${BACKEND_URL}/api/categories`);
         const result = await res.json();
         
         if (result.success) {
@@ -87,7 +102,7 @@ async function fetchCategories() {
 
 async function fetchProducts() { 
     try { 
-        const res = await fetch(`${BACKEND_URL}/api/products`); 
+        const res = await storeFetchWithAuth(`${BACKEND_URL}/api/products`); 
         const result = await res.json(); 
         
         if (result.success && result.data) { 
@@ -101,7 +116,6 @@ async function fetchProducts() {
     } 
 }
 
-// --- RENDERING & UI ---
 function renderProducts(productsToRender) { 
     storefront.innerHTML = ''; 
     
@@ -118,7 +132,6 @@ function renderProducts(productsToRender) {
             ? product.variants[0] 
             : { price: 0, weightOrVolume: 'N/A', stock: 0, lowStockThreshold: 5 };
 
-        // FOMO Badge Logic
         let fomoBadge = '';
         const threshold = displayVariant.lowStockThreshold || 5;
         if (displayVariant.stock > 0 && displayVariant.stock <= threshold) {
@@ -151,7 +164,6 @@ function renderProducts(productsToRender) {
     }); 
 }
 
-// --- FILTERING & SEARCH ---
 function filterCategory(category) { 
     document.getElementById('search-input').value = ''; 
     const title = document.getElementById('product-grid-title');
@@ -235,7 +247,6 @@ function calculateLevenshtein(a, b) {
     return m[a.length][b.length]; 
 }
 
-// --- CART LOGIC ---
 function quickAdd(productId) { 
     const p = allProducts.find(p => p._id === productId); 
     if (!p) return; 
@@ -346,7 +357,6 @@ function setDeliveryType(type) {
     document.getElementById('routine-options').classList.toggle('hidden', type === 'Instant'); 
 }
 
-// --- ORDER PROCESSING & TRACKING ---
 async function placeOrder() { 
     if (cart.length === 0) return; 
     
@@ -368,7 +378,7 @@ async function placeOrder() {
     checkoutBtn.disabled = true; 
     
     try { 
-        const res = await fetch(`${BACKEND_URL}/api/orders`, { 
+        const res = await storeFetchWithAuth(`${BACKEND_URL}/api/orders`, { 
             method: 'POST', 
             headers: { 'Content-Type': 'application/json' }, 
             body: JSON.stringify({
@@ -418,7 +428,7 @@ async function checkOrderStatus() {
     trackingContent.innerHTML = '<p class="empty-state">Fetching live status...</p>'; 
     
     try { 
-        const res = await fetch(`${BACKEND_URL}/api/orders/${savedOrderId}`); 
+        const res = await storeFetchWithAuth(`${BACKEND_URL}/api/orders/${savedOrderId}`); 
         const result = await res.json(); 
         
         if (result.success) { 
@@ -440,7 +450,8 @@ async function checkOrderStatus() {
             `; 
             
             if (order.status !== 'Dispatched' && !trackingEventSource) {
-                trackingEventSource = new EventSource(`${BACKEND_URL}/api/orders/stream/customer/${savedOrderId}`);
+                const token = localStorage.getItem('dailyPick_customerToken') || '';
+                trackingEventSource = new EventSource(`${BACKEND_URL}/api/orders/stream/customer/${savedOrderId}?token=${token}`);
                 trackingEventSource.onmessage = (event) => { 
                     const data = JSON.parse(event.data); 
                     if (data.type === 'STATUS_UPDATE') { 
