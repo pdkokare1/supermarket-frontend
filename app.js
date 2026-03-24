@@ -5,7 +5,8 @@ let allProducts = [];
 let cart = []; 
 let selectedDeliveryType = 'Instant'; 
 let allCategories = [];
-let trackingEventSource = null; 
+let trackingStreamController = null; // OPTIMIZED: Replaced native EventSource
+let isProcessingOrder = false; // OPTIMIZED: Prevents double-billing race conditions
 
 // DOM Elements
 const storefront = document.getElementById('storefront'); 
@@ -51,6 +52,15 @@ async function storeFetchWithAuth(url, options = {}) {
     }
     
     return response;
+}
+
+// --- OPTIMIZATION: Cloudinary Auto-Compression & Resizing ---
+function optimizeCloudinaryUrl(url, width) {
+    if (!url || !url.includes('cloudinary.com')) return url;
+    if (url.includes('/upload/')) {
+        return url.replace('/upload/', `/upload/q_auto,f_auto,w_${width}/`);
+    }
+    return url;
 }
 
 function switchView(viewName) { 
@@ -138,8 +148,10 @@ function renderProducts(productsToRender) {
             fomoBadge = `<div class="fomo-badge">🔥 Only ${displayVariant.stock} left!</div>`;
         }
 
+        // --- OPTIMIZED: Requesting a 400px width WEBP instead of full raw file ---
+        const optimizedImg = optimizeCloudinaryUrl(product.imageUrl, 400);
         let imageContent = product.imageUrl 
-            ? `<img src="${product.imageUrl}" style="width:100%; height:100%; object-fit:contain; border-radius:8px;">`
+            ? `<img src="${optimizedImg}" style="width:100%; height:100%; object-fit:contain; border-radius:8px;">`
             : `<div style="font-size:44px; display:flex; align-items:center; justify-content:center; width:100%; height:100%;">📦</div>`;
 
         card.innerHTML = `
@@ -315,8 +327,10 @@ function updateGlobalCartUI() {
         const row = document.createElement('div'); 
         row.classList.add('cart-item-row'); 
         
+        // --- OPTIMIZED: Requesting an ultra-tiny 100px thumbnail ---
+        const optimizedThumb = optimizeCloudinaryUrl(item.imageUrl, 100);
         const thumb = item.imageUrl 
-            ? `<img src="${item.imageUrl}" style="width:32px; height:32px; border-radius:6px; object-fit:contain;">` 
+            ? `<img src="${optimizedThumb}" style="width:32px; height:32px; border-radius:6px; object-fit:contain;">` 
             : `<div style="font-size:24px;">📦</div>`;
             
         row.innerHTML = `
@@ -358,7 +372,8 @@ function setDeliveryType(type) {
 }
 
 async function placeOrder() { 
-    if (cart.length === 0) return; 
+    // --- SECURITY: Lock to prevent double-billing race conditions ---
+    if (cart.length === 0 || isProcessingOrder) return; 
     
     const name = document.getElementById('cust-name').value.trim(); 
     const phone = document.getElementById('cust-phone').value.trim(); 
@@ -369,13 +384,14 @@ async function placeOrder() {
         return;
     } 
     
-    const subtotal = cart.reduce((s, i) => s + (i.currentPrice * i.qty), 0); 
-    const finalTotal = subtotal + DELIVERY_FEE; 
-    const scheduleTime = selectedDeliveryType === 'Routine' ? document.getElementById('schedule-time').value : 'ASAP'; 
-    
+    isProcessingOrder = true;
     const checkoutBtn = document.querySelector('.checkout-btn'); 
     checkoutBtn.innerText = 'Processing...'; 
     checkoutBtn.disabled = true; 
+    
+    const subtotal = cart.reduce((s, i) => s + (i.currentPrice * i.qty), 0); 
+    const finalTotal = subtotal + DELIVERY_FEE; 
+    const scheduleTime = selectedDeliveryType === 'Routine' ? document.getElementById('schedule-time').value : 'ASAP'; 
     
     try { 
         const res = await storeFetchWithAuth(`${BACKEND_URL}/api/orders`, { 
@@ -414,6 +430,7 @@ async function placeOrder() {
     } finally { 
         checkoutBtn.innerText = 'Place Order'; 
         checkoutBtn.disabled = false; 
+        isProcessingOrder = false; // Release the lock
     } 
 }
 
@@ -449,18 +466,63 @@ async function checkOrderStatus() {
                 </div>
             `; 
             
-            if (order.status !== 'Dispatched' && !trackingEventSource) {
+            // --- SECURED & STABILIZED: Live Tracking via Fetch Streams ---
+            if (order.status !== 'Dispatched' && !trackingStreamController) {
                 const token = localStorage.getItem('dailyPick_customerToken') || '';
-                trackingEventSource = new EventSource(`${BACKEND_URL}/api/orders/stream/customer/${savedOrderId}?token=${token}`);
-                trackingEventSource.onmessage = (event) => { 
-                    const data = JSON.parse(event.data); 
-                    if (data.type === 'STATUS_UPDATE') { 
-                        showToast('🚚 Your order has been dispatched!'); 
-                        trackingEventSource.close(); 
-                        trackingEventSource = null; 
-                        checkOrderStatus(); 
-                    } 
-                };
+                trackingStreamController = new AbortController();
+                
+                (async () => {
+                    try {
+                        const response = await fetch(`${BACKEND_URL}/api/orders/stream/customer/${savedOrderId}`, {
+                            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                            signal: trackingStreamController.signal
+                        });
+
+                        if (!response.ok) throw new Error('Tracking stream failed');
+                        
+                        const reader = response.body.getReader();
+                        const decoder = new TextDecoder('utf-8');
+                        let buffer = '';
+
+                        while (true) {
+                            const { done, value } = await reader.read();
+                            if (done) break;
+
+                            buffer += decoder.decode(value, { stream: true });
+                            const lines = buffer.split('\n\n');
+                            buffer = lines.pop(); // Keep incomplete chunks
+
+                            for (const line of lines) {
+                                if (line.startsWith('data: ')) {
+                                    const dataStr = line.substring(6).trim();
+                                    if (dataStr === ':' || !dataStr) continue;
+                                    
+                                    try {
+                                        const data = JSON.parse(dataStr);
+                                        if (data.message) continue;
+                                        
+                                        if (data.type === 'STATUS_UPDATE') {
+                                            showToast('🚚 Your order has been dispatched!');
+                                            if (trackingStreamController) {
+                                                trackingStreamController.abort();
+                                                trackingStreamController = null;
+                                            }
+                                            checkOrderStatus();
+                                            return; // Exit stream explicitly
+                                        }
+                                    } catch (err) {
+                                        console.error("Stream parse error", err);
+                                    }
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        if (error.name !== 'AbortError') {
+                            console.warn("Live tracking disconnected. Will retry on next view.");
+                            trackingStreamController = null;
+                        }
+                    }
+                })();
             }
         } else { 
             trackingContent.innerHTML = '<p class="empty-state">Order details could not be found.</p>'; 
