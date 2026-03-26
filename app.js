@@ -5,8 +5,8 @@ let allProducts = [];
 let cart = []; 
 let selectedDeliveryType = 'Instant'; 
 let allCategories = [];
-let trackingStreamController = null; // OPTIMIZED: Replaced native EventSource
-let isProcessingOrder = false; // OPTIMIZED: Prevents double-billing race conditions
+let trackingStreamController = null; 
+let isProcessingOrder = false; 
 
 // DOM Elements
 const storefront = document.getElementById('storefront'); 
@@ -36,10 +36,11 @@ const CATEGORY_IMAGES = {
     'Grocery & Kitchen': { emoji: '🌾', color: '#fef3c7' }
 };
 
-// --- NEW: Front-End API Wrapper to attach Token (future-proofing Customer Auth) ---
 async function storeFetchWithAuth(url, options = {}) {
     const token = localStorage.getItem('dailyPick_customerToken'); 
     options.headers = options.headers || {};
+    // --- PHASE 3: Seamless Integration with Phase 1 Secure Cookies ---
+    options.credentials = 'include';
     
     if (token) {
         options.headers['Authorization'] = `Bearer ${token}`;
@@ -54,7 +55,6 @@ async function storeFetchWithAuth(url, options = {}) {
     return response;
 }
 
-// --- OPTIMIZATION: Cloudinary Auto-Compression & Resizing ---
 function optimizeCloudinaryUrl(url, width) {
     if (!url || !url.includes('cloudinary.com')) return url;
     if (url.includes('/upload/')) {
@@ -148,7 +148,6 @@ function renderProducts(productsToRender) {
             fomoBadge = `<div class="fomo-badge">🔥 Only ${displayVariant.stock} left!</div>`;
         }
 
-        // --- OPTIMIZED: Requesting a 400px width WEBP instead of full raw file ---
         const optimizedImg = optimizeCloudinaryUrl(product.imageUrl, 400);
         let imageContent = product.imageUrl 
             ? `<img src="${optimizedImg}" style="width:100%; height:100%; object-fit:contain; border-radius:8px;">`
@@ -327,7 +326,6 @@ function updateGlobalCartUI() {
         const row = document.createElement('div'); 
         row.classList.add('cart-item-row'); 
         
-        // --- OPTIMIZED: Requesting an ultra-tiny 100px thumbnail ---
         const optimizedThumb = optimizeCloudinaryUrl(item.imageUrl, 100);
         const thumb = item.imageUrl 
             ? `<img src="${optimizedThumb}" style="width:32px; height:32px; border-radius:6px; object-fit:contain;">` 
@@ -372,7 +370,6 @@ function setDeliveryType(type) {
 }
 
 async function placeOrder() { 
-    // --- SECURITY: Lock to prevent double-billing race conditions ---
     if (cart.length === 0 || isProcessingOrder) return; 
     
     const name = document.getElementById('cust-name').value.trim(); 
@@ -430,7 +427,7 @@ async function placeOrder() {
     } finally { 
         checkoutBtn.innerText = 'Place Order'; 
         checkoutBtn.disabled = false; 
-        isProcessingOrder = false; // Release the lock
+        isProcessingOrder = false; 
     } 
 }
 
@@ -456,9 +453,12 @@ async function checkOrderStatus() {
                 ? `<div style="margin-top:12px; font-size:12px; color:#64748B; font-weight:700;">📅 Routine: ${order.scheduleTime}</div>` 
                 : `<div style="margin-top:12px; font-size:12px; color:#16A34A; font-weight:700;">⚡ Instant Delivery</div>`; 
             
+            // --- PHASE 3: Utilize New Sequential Order Identifier on Customer UI ---
+            const displayId = order.orderNumber || '#' + (order._id).toString().slice(-4).toUpperCase();
+
             trackingContent.innerHTML = `
                 <div class="tracking-card">
-                    <h3>Order #${(order._id).toString().slice(-4).toUpperCase()}</h3>
+                    <h3>Order ${displayId}</h3>
                     <p>Placed at ${timeString}</p>
                     <div class="status-badge ${order.status === 'Dispatched' ? 'dispatched' : ''}">${order.status}</div>
                     ${scheduleBadge}
@@ -466,7 +466,6 @@ async function checkOrderStatus() {
                 </div>
             `; 
             
-            // --- SECURED & STABILIZED: Live Tracking via Fetch Streams ---
             if (order.status !== 'Dispatched' && !trackingStreamController) {
                 const token = localStorage.getItem('dailyPick_customerToken') || '';
                 trackingStreamController = new AbortController();
@@ -475,6 +474,7 @@ async function checkOrderStatus() {
                     try {
                         const response = await fetch(`${BACKEND_URL}/api/orders/stream/customer/${savedOrderId}`, {
                             headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                            credentials: 'include', // PHASE 3: Stream security
                             signal: trackingStreamController.signal
                         });
 
@@ -490,7 +490,7 @@ async function checkOrderStatus() {
 
                             buffer += decoder.decode(value, { stream: true });
                             const lines = buffer.split('\n\n');
-                            buffer = lines.pop(); // Keep incomplete chunks
+                            buffer = lines.pop(); 
 
                             for (const line of lines) {
                                 if (line.startsWith('data: ')) {
@@ -508,7 +508,7 @@ async function checkOrderStatus() {
                                                 trackingStreamController = null;
                                             }
                                             checkOrderStatus();
-                                            return; // Exit stream explicitly
+                                            return; 
                                         }
                                     } catch (err) {
                                         console.error("Stream parse error", err);
