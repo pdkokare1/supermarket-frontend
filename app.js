@@ -39,7 +39,6 @@ const CATEGORY_IMAGES = {
 async function storeFetchWithAuth(url, options = {}) {
     const token = localStorage.getItem('dailyPick_customerToken'); 
     options.headers = options.headers || {};
-    // --- PHASE 3: Seamless Integration with Phase 1 Secure Cookies ---
     options.credentials = 'include';
     
     if (token) {
@@ -453,16 +452,41 @@ async function checkOrderStatus() {
                 ? `<div style="margin-top:12px; font-size:12px; color:#64748B; font-weight:700;">📅 Routine: ${order.scheduleTime}</div>` 
                 : `<div style="margin-top:12px; font-size:12px; color:#16A34A; font-weight:700;">⚡ Instant Delivery</div>`; 
             
-            // --- PHASE 3: Utilize New Sequential Order Identifier on Customer UI ---
             const displayId = order.orderNumber || '#' + (order._id).toString().slice(-4).toUpperCase();
+
+            // --- NEW: Driver Assignment Display ---
+            let driverHtml = '';
+            if (order.deliveryDriverName && order.deliveryDriverName !== 'Unassigned') {
+                driverHtml = `
+                    <div style="margin-top: 16px; padding: 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
+                        <p style="margin: 0; font-size: 11px; color: #166534; font-weight: 800; text-transform: uppercase;">🚚 Delivery Partner</p>
+                        <p style="margin: 4px 0 0 0; font-size: 16px; font-weight: 800; color: #14532d;">${order.deliveryDriverName}</p>
+                        ${order.driverPhone ? `<p style="margin: 4px 0 0 0; font-size: 14px;"><a href="tel:${order.driverPhone}" style="color: #16a34a; text-decoration: none; font-weight: 600;">📞 Call: ${order.driverPhone}</a></p>` : ''}
+                    </div>
+                `;
+            }
+            
+            // --- NEW: Order Summary Display (Dynamically supports Partial Refunds) ---
+            const itemsHtml = order.items.map(i => `<div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px; color:var(--text-main);"><span>${i.qty}x ${i.name}</span><span style="font-weight:600;">₹${(i.price * i.qty).toFixed(2)}</span></div>`).join('');
 
             trackingContent.innerHTML = `
                 <div class="tracking-card">
-                    <h3>Order ${displayId}</h3>
-                    <p>Placed at ${timeString}</p>
-                    <div class="status-badge ${order.status === 'Dispatched' ? 'dispatched' : ''}">${order.status}</div>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3 style="margin:0;">Order ${displayId}</h3>
+                        <span class="status-badge ${order.status === 'Dispatched' ? 'dispatched' : ''}" style="margin:0;">${order.status}</span>
+                    </div>
+                    <p style="margin-top:4px; font-size:12px; color:var(--text-muted);">Placed at ${timeString}</p>
                     ${scheduleBadge}
-                    <div style="margin-top:24px; font-size:14px; font-weight:700;">To Pay: ₹${order.totalAmount} (COD)</div>
+                    ${driverHtml}
+                    <div style="margin-top: 20px; padding-top: 16px; border-top: 1px dashed #cbd5e1;">
+                        <p style="font-size:11px; font-weight:800; color:var(--text-muted); margin-bottom:12px; text-transform:uppercase;">Order Summary</p>
+                        ${itemsHtml}
+                        <div style="display:flex; justify-content:space-between; margin-top:12px; font-size:16px; font-weight:800; color:var(--primary);">
+                            <span>Total Amount</span>
+                            <span>₹${order.totalAmount.toFixed(2)}</span>
+                        </div>
+                        <p style="font-size:10px; color:var(--text-muted); margin-top:8px; text-align:center;">*Total automatically updates if items are unavailable and refunded.</p>
+                    </div>
                 </div>
             `; 
             
@@ -474,7 +498,7 @@ async function checkOrderStatus() {
                     try {
                         const response = await fetch(`${BACKEND_URL}/api/orders/stream/customer/${savedOrderId}`, {
                             headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-                            credentials: 'include', // PHASE 3: Stream security
+                            credentials: 'include', 
                             signal: trackingStreamController.signal
                         });
 
