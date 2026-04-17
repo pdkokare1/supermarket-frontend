@@ -1,3 +1,4 @@
+/* app.js */
 const BACKEND_URL = 'https://dailypick-backend-production-05d6.up.railway.app';
 const DELIVERY_FEE = 20;
 
@@ -373,10 +374,16 @@ async function placeOrder() {
     const finalTotal = subtotal + DELIVERY_FEE; 
     const scheduleTime = selectedDeliveryType === 'Routine' ? document.getElementById('schedule-time').value : 'ASAP'; 
     
+    // OPTIMIZATION: Idempotency Key Generation prevents double-billing if the user taps "Place Order" multiple times on a slow connection
+    const idempotencyKey = 'ONLINE-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9);
+
     try { 
         const res = await storeFetchWithAuth(`${BACKEND_URL}/api/orders`, { 
             method: 'POST', 
-            headers: { 'Content-Type': 'application/json' }, 
+            headers: { 
+                'Content-Type': 'application/json',
+                'Idempotency-Key': idempotencyKey 
+            }, 
             body: JSON.stringify({
                 customerName: name, 
                 customerPhone: phone, 
