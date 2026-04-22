@@ -3,10 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://dailypick-backend-production-05d6.up.railway.app; img-src 'self' data: https://res.cloudinary.com; script-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com;">
+    
     <title>DailyPick | Quick Market</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://dailypick-backend-production-05d6.up.railway.app" crossorigin>
+    <link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="styles.css">
@@ -23,41 +27,41 @@
             </div>
             <div class="user-actions">
                 <div class="wallet-icon">💳 ₹0</div>
-                <div class="profile-icon">👤</div>
+                <div class="profile-icon" aria-label="Profile">👤</div>
             </div>
         </div>
         
         <div class="search-container">
             <div class="search-bar-wrapper">
                 <span class="search-icon">🔍</span>
-                <input type="text" id="search-input" class="search-input" placeholder="Search for milk, chips, soap..." oninput="handleSearch(event)">
-                <span class="mic-icon">🎤</span>
+                <input type="text" id="search-input" class="search-input" placeholder="Search for milk, chips, soap..." aria-label="Search products">
+                <span class="mic-icon" aria-label="Voice Search">🎤</span>
             </div>
         </div>
 
         <div class="quick-nav">
-            <div class="quick-nav-item active" onclick="filterCategory('All')"><span class="nav-ico">🛍️</span>All</div>
-            <div class="quick-nav-item" onclick="filterByTag('promo-snack', 'Hot Deals')"><span class="nav-ico">🔥</span>Deals</div>
-            <div class="quick-nav-item" onclick="filterCategory('Grocery & Kitchen')"><span class="nav-ico">🛒</span>Groceries</div>
-            <div class="quick-nav-item" onclick="filterCategory('Personal Care')"><span class="nav-ico">🧴</span>Care</div>
-            <div class="quick-nav-item" onclick="filterCategory('Cleaning Essentials')"><span class="nav-ico">🏠</span>Home</div>
+            <div class="quick-nav-item active" data-action="filter-cat" data-value="All"><span class="nav-ico">🛍️</span>All</div>
+            <div class="quick-nav-item" data-action="filter-tag" data-tag="promo-snack" data-title="Hot Deals"><span class="nav-ico">🔥</span>Deals</div>
+            <div class="quick-nav-item" data-action="filter-cat" data-value="Grocery & Kitchen"><span class="nav-ico">🛒</span>Groceries</div>
+            <div class="quick-nav-item" data-action="filter-cat" data-value="Personal Care"><span class="nav-ico">🧴</span>Care</div>
+            <div class="quick-nav-item" data-action="filter-cat" data-value="Cleaning Essentials"><span class="nav-ico">🏠</span>Home</div>
         </div>
     </header>
 
     <article id="shop-view" class="view-section active">
         
         <section class="promo-banners">
-            <div class="promo-card" style="background: linear-gradient(135deg, #eab308, #d97706); color: white; cursor: pointer;" onclick="filterByTag('promo-morning', 'Morning Fresh')">
+            <div class="promo-card" style="background: linear-gradient(135deg, #eab308, #d97706); color: white; cursor: pointer;" data-action="filter-tag" data-tag="promo-morning" data-title="Morning Fresh">
                 <p style="font-size: 10px; font-weight: 800; letter-spacing: 1px;">NEW ARRIVALS</p>
                 <h3 style="margin-top: 4px;">Morning Fresh</h3>
                 <p style="margin-top: auto; font-size: 11px;">✦ Shop Dairy ✦</p>
             </div>
-            <div class="promo-card" style="background: linear-gradient(135deg, #065f46, #047857); color: white; cursor: pointer;" onclick="filterByTag('promo-snack', 'Snack Party')">
+            <div class="promo-card" style="background: linear-gradient(135deg, #065f46, #047857); color: white; cursor: pointer;" data-action="filter-tag" data-tag="promo-snack" data-title="Snack Party">
                 <p style="font-size: 10px; font-weight: 800;">WEEKEND SPECIAL</p>
                 <h3 style="margin-top: 4px;">Snack Party</h3>
                 <p style="margin-top: auto; font-size: 11px;">✦ Munchies ✦</p>
             </div>
-            <div class="promo-card" style="background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e; cursor: pointer;" onclick="filterByTag('promo-summer', 'Summer Coolers')">
+            <div class="promo-card" style="background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e; cursor: pointer;" data-action="filter-tag" data-tag="promo-summer" data-title="Summer Coolers">
                 <p style="font-size: 10px; font-weight: 800;">FEATURED</p>
                 <h3 style="margin-top: 4px;">Summer Coolers</h3>
                 <p style="margin-top: auto; font-size: 11px;">✦ Refreshing ✦</p>
@@ -73,7 +77,7 @@
         <section class="products-section">
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 16px;">
                 <h2 class="section-title" id="product-grid-title" style="margin: 0;">All Products</h2>
-                <button onclick="filterCategory('All')" style="background: none; border: none; color: var(--primary); font-weight: 700; font-size: 12px; cursor: pointer;">View All</button>
+                <button id="btn-view-all" style="background: none; border: none; color: var(--primary); font-weight: 700; font-size: 12px; cursor: pointer;" aria-label="View all products">View All</button>
             </div>
             
             <main id="skeleton-grid" class="product-grid">
@@ -90,7 +94,7 @@
         <main class="tracking-container" style="padding-top: 100px;">
             <div class="tracking-header">
                 <h2>Active Order</h2>
-                <button class="refresh-btn" onclick="checkOrderStatus()">↻ Refresh</button>
+                <button class="refresh-btn" id="btn-refresh-orders" aria-label="Refresh Order Status">↻ Refresh</button>
             </div>
             <div id="tracking-content">
                 <p class="empty-state">You have no active orders right now.</p>
@@ -98,7 +102,7 @@
         </main>
     </article>
 
-    <div id="cart-ribbon" class="cart-ribbon hidden" onclick="openCart()">
+    <div id="cart-ribbon" class="cart-ribbon hidden">
         <div class="ribbon-info">
             <span id="ribbon-items-count" class="ribbon-qty">1 ITEM</span>
             <span id="ribbon-total-price" class="ribbon-price">₹0</span>
@@ -108,7 +112,7 @@
 
     <section id="cart-view" class="cart-view">
         <div class="cart-header">
-            <button class="back-btn" onclick="closeCart()">← Back</button>
+            <button class="back-btn" id="btn-close-cart" aria-label="Close Cart">← Back</button>
             <h2>Checkout</h2>
             <div style="width: 60px;"></div>
         </div>
@@ -118,12 +122,12 @@
         <div class="schedule-section">
             <h3 class="delivery-title" style="margin-bottom: 12px;">Delivery Speed</h3>
             <div class="delivery-tabs">
-                <button id="tab-instant" class="del-tab active" onclick="setDeliveryType('Instant')">⚡ 18 Mins</button>
-                <button id="tab-routine" class="del-tab" onclick="setDeliveryType('Routine')">📅 Daily Routine</button>
+                <button id="tab-instant" class="del-tab active" aria-label="Instant Delivery">⚡ 18 Mins</button>
+                <button id="tab-routine" class="del-tab" aria-label="Routine Delivery">📅 Daily Routine</button>
             </div>
             <div id="routine-options" class="hidden" style="margin-top: 16px;">
                 <label style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; display: block; text-transform: uppercase;">Select Routine Time</label>
-                <select id="schedule-time" class="delivery-input">
+                <select id="schedule-time" class="delivery-input" aria-label="Select delivery time">
                     <option value="Daily at 7:00 AM">Morning (7:00 AM)</option>
                     <option value="Daily at 6:00 PM">Evening (6:00 PM)</option>
                 </select>
@@ -132,9 +136,9 @@
 
         <div class="delivery-section">
             <h3 class="delivery-title">Delivery Details</h3>
-            <input type="text" id="cust-name" class="delivery-input" placeholder="Your Name" required>
-            <input type="tel" id="cust-phone" class="delivery-input" placeholder="Phone Number" required>
-            <textarea id="cust-address" class="delivery-input" placeholder="Complete Address (Flat, Building, Street)" rows="2" required></textarea>
+            <input type="text" id="cust-name" class="delivery-input" placeholder="Your Name" required aria-label="Your Name">
+            <input type="tel" id="cust-phone" class="delivery-input" placeholder="Phone Number" required aria-label="Phone Number">
+            <textarea id="cust-address" class="delivery-input" placeholder="Complete Address (Flat, Building, Street)" rows="2" required aria-label="Complete Address"></textarea>
         </div>
 
         <div class="cart-footer">
@@ -142,17 +146,17 @@
             <div class="summary-row"><span>Delivery</span><span id="cart-delivery">₹20</span></div>
             <hr class="summary-divider">
             <div class="summary-row total-row"><span>To Pay</span><span id="cart-total">₹0</span></div>
-            <button class="primary-btn checkout-btn" onclick="placeOrder()">Place Order</button>
+            <button class="primary-btn checkout-btn" id="btn-checkout" aria-label="Place Order">Place Order</button>
         </div>
     </section>
 
     <div id="toast-container"></div>
 
     <nav class="bottom-nav">
-        <button id="nav-shop" class="nav-item active" onclick="switchView('shop')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
-        <button id="nav-orders" class="nav-item" onclick="switchView('orders')"><span class="nav-icon">🛍️</span><span class="nav-label">Order Again</span></button>
-        <button class="nav-item" onclick="window.scrollTo({top: 0, behavior: 'smooth'})"><span class="nav-icon">🗂️</span><span class="nav-label">Categories</span></button>
-        <button class="nav-item"><span class="nav-icon">🖨️</span><span class="nav-label">Print</span></button>
+        <button id="nav-shop" class="nav-item active" aria-label="Home"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
+        <button id="nav-orders" class="nav-item" aria-label="Order Again"><span class="nav-icon">🛍️</span><span class="nav-label">Order Again</span></button>
+        <button id="nav-cats" class="nav-item" aria-label="Categories"><span class="nav-icon">🗂️</span><span class="nav-label">Categories</span></button>
+        <button class="nav-item" aria-label="Print"><span class="nav-icon">🖨️</span><span class="nav-label">Print</span></button>
     </nav>
 
     <script src="app.js"></script>
