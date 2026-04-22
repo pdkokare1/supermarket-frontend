@@ -89,21 +89,28 @@ async function fetchCategories() {
         if (result.success) {
             allCategories = result.data;
             const grid = document.getElementById('categories-grid');
-            grid.innerHTML = ''; 
+            grid.innerHTML = ''; // Safe here, clearing elements
             
+            const fragment = document.createDocumentFragment();
             allCategories.forEach(cat => {
                 const visual = CATEGORY_IMAGES[cat.name] || { emoji: '🛍️', color: '#f1f5f9' };
                 const card = document.createElement('div'); 
                 card.className = 'category-card';
-                card.innerHTML = `
-                    <div class="category-img-wrapper" style="background-color: ${visual.color}">
-                        ${visual.emoji}
-                    </div>
-                    <p>${cat.name}</p>
-                `;
-                card.onclick = () => filterCategory(cat.name);
-                grid.appendChild(card);
+                card.addEventListener('click', () => filterCategory(cat.name));
+                
+                const imgWrapper = document.createElement('div');
+                imgWrapper.className = 'category-img-wrapper';
+                imgWrapper.style.backgroundColor = visual.color;
+                imgWrapper.textContent = visual.emoji;
+                
+                const title = document.createElement('p');
+                title.textContent = cat.name;
+                
+                card.appendChild(imgWrapper);
+                card.appendChild(title);
+                fragment.appendChild(card);
             });
+            grid.appendChild(fragment);
         }
     } catch (e) { 
         console.error("Error fetching categories", e); 
@@ -122,7 +129,11 @@ async function fetchProducts() {
             renderProducts(allProducts); 
         } 
     } catch(e) { 
-        skeletonGrid.innerHTML = '<p style="grid-column: span 2; text-align:center;">Failed to connect.</p>'; 
+        skeletonGrid.innerHTML = '';
+        const errorMsg = document.createElement('p');
+        errorMsg.style.cssText = "grid-column: span 2; text-align:center;";
+        errorMsg.textContent = "Failed to connect.";
+        skeletonGrid.appendChild(errorMsg); 
     } 
 }
 
@@ -130,49 +141,97 @@ function renderProducts(productsToRender) {
     storefront.innerHTML = ''; 
     
     if (productsToRender.length === 0) { 
-        storefront.innerHTML = '<p style="grid-column:span 2;text-align:center;color:#94A3B8;margin-top:40px;">No products found.</p>'; 
+        const emptyState = document.createElement('p');
+        emptyState.style.cssText = "grid-column:span 2;text-align:center;color:#94A3B8;margin-top:40px;";
+        emptyState.textContent = "No products found.";
+        storefront.appendChild(emptyState); 
         return; 
     } 
     
+    const fragment = document.createDocumentFragment();
+
     productsToRender.forEach(product => { 
         const card = document.createElement('div'); 
-        card.classList.add('product-card'); 
+        card.className = 'product-card'; 
         
         const displayVariant = (product.variants && product.variants.length > 0) 
             ? product.variants[0] 
             : { price: 0, weightOrVolume: 'N/A', stock: 0, lowStockThreshold: 5 };
 
-        let fomoBadge = '';
+        // Main info block
+        const infoBlock = document.createElement('div');
+        
+        // Image Container
+        const imgContainer = document.createElement('div');
+        imgContainer.className = 'product-image';
+        imgContainer.style.cssText = 'padding:0; overflow:hidden; position:relative;';
+        
         const threshold = displayVariant.lowStockThreshold || 5;
         if (displayVariant.stock > 0 && displayVariant.stock <= threshold) {
-            fomoBadge = `<div class="fomo-badge">🔥 Only ${displayVariant.stock} left!</div>`;
+            const badge = document.createElement('div');
+            badge.className = 'fomo-badge';
+            badge.textContent = `🔥 Only ${displayVariant.stock} left!`;
+            imgContainer.appendChild(badge);
         }
 
         const optimizedImg = optimizeCloudinaryUrl(product.imageUrl, 400);
-        let imageContent = product.imageUrl 
-            ? `<img src="${optimizedImg}" style="width:100%; height:100%; object-fit:contain; border-radius:8px;">`
-            : `<div style="font-size:44px; display:flex; align-items:center; justify-content:center; width:100%; height:100%;">📦</div>`;
+        if (product.imageUrl) {
+            const img = document.createElement('img');
+            img.src = optimizedImg;
+            img.style.cssText = 'width:100%; height:100%; object-fit:contain; border-radius:8px;';
+            img.alt = product.name;
+            imgContainer.appendChild(img);
+        } else {
+            const placeholder = document.createElement('div');
+            placeholder.style.cssText = 'font-size:44px; display:flex; align-items:center; justify-content:center; width:100%; height:100%;';
+            placeholder.textContent = '📦';
+            imgContainer.appendChild(placeholder);
+        }
 
-        card.innerHTML = `
-            <div>
-                <div class="product-image" style="padding:0; overflow:hidden; position:relative;">
-                    ${fomoBadge}
-                    ${imageContent}
-                </div>
-                <div class="product-info">
-                    <h3>${product.name}</h3>
-                    <p class="product-weight">${displayVariant.weightOrVolume}</p>
-                </div>
-            </div>
-            <div class="price-action-row">
-                <div class="product-price">₹${displayVariant.price}</div>
-                <div class="action-container" id="action-container-${product._id}"></div>
-            </div>
-        `; 
+        // Text Info
+        const textInfo = document.createElement('div');
+        textInfo.className = 'product-info';
         
-        storefront.appendChild(card); 
-        updateCardActionUI(product._id); 
+        const title = document.createElement('h3');
+        title.textContent = product.name;
+        
+        const weight = document.createElement('p');
+        weight.className = 'product-weight';
+        weight.textContent = displayVariant.weightOrVolume;
+        
+        textInfo.appendChild(title);
+        textInfo.appendChild(weight);
+        
+        infoBlock.appendChild(imgContainer);
+        infoBlock.appendChild(textInfo);
+
+        // Price Row
+        const priceRow = document.createElement('div');
+        priceRow.className = 'price-action-row';
+        
+        const priceDiv = document.createElement('div');
+        priceDiv.className = 'product-price';
+        priceDiv.textContent = `₹${displayVariant.price}`;
+        
+        const actionContainer = document.createElement('div');
+        actionContainer.className = 'action-container';
+        actionContainer.id = `action-container-${product._id}`;
+        
+        priceRow.appendChild(priceDiv);
+        priceRow.appendChild(actionContainer);
+        
+        // Assemble Card
+        card.appendChild(infoBlock);
+        card.appendChild(priceRow);
+        fragment.appendChild(card);
     }); 
+    
+    storefront.appendChild(fragment);
+    
+    // Process UI hooks after DOM insertion
+    productsToRender.forEach(product => {
+        updateCardActionUI(product._id); 
+    });
 }
 
 function filterCategory(category) { 
@@ -180,10 +239,10 @@ function filterCategory(category) {
     const title = document.getElementById('product-grid-title');
     
     if (category === 'All') { 
-        title.innerText = 'All Products'; 
+        title.textContent = 'All Products'; 
         renderProducts(allProducts); 
     } else { 
-        title.innerText = category; 
+        title.textContent = category; 
         renderProducts(allProducts.filter(p => p.category === category)); 
     }
     
@@ -193,7 +252,7 @@ function filterCategory(category) {
 function filterByTag(tag, displayTitle) {
     document.getElementById('search-input').value = ''; 
     const title = document.getElementById('product-grid-title'); 
-    title.innerText = displayTitle;
+    title.textContent = displayTitle;
     
     renderProducts(allProducts.filter(p => { 
         return p.searchTags && p.searchTags.toLowerCase().includes(tag.toLowerCase()); 
@@ -202,7 +261,7 @@ function filterByTag(tag, displayTitle) {
     title.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// --- NEW FUNCTIONALITY: Scalable Server-Side Autocomplete ---
+// --- Scalable Server-Side Autocomplete ---
 let searchDebounceTimeout = null;
 
 async function handleSearch(event) { 
@@ -213,9 +272,9 @@ async function handleSearch(event) {
         return; 
     } 
 
-    if (query.length < 2) return; // Wait for at least 2 chars
+    if (query.length < 2) return; 
     
-    document.getElementById('product-grid-title').innerText = `Searching...`;
+    document.getElementById('product-grid-title').textContent = `Searching...`;
     
     clearTimeout(searchDebounceTimeout);
     searchDebounceTimeout = setTimeout(async () => {
@@ -224,26 +283,22 @@ async function handleSearch(event) {
             const result = await res.json();
             
             if (result.success) {
-                document.getElementById('product-grid-title').innerText = `Search Results`;
+                document.getElementById('product-grid-title').textContent = `Search Results`;
                 renderProducts(result.data);
             }
         } catch (e) {
             console.error("Autocomplete search failed", e);
-            document.getElementById('product-grid-title').innerText = `Error searching`;
+            document.getElementById('product-grid-title').textContent = `Error searching`;
         }
-    }, 300); // 300ms debounce
+    }, 300);
 }
 
 function quickAdd(productId) { 
-    // We need to fetch the full product object if it was returned by autocomplete 
-    // and doesn't exist in allProducts yet
     let p = allProducts.find(p => p._id === productId); 
     
     if (!p) {
-        // It's from autocomplete, so we have to extract the data from the DOM manually
-        // Or we could fetch it, but let's assume autocomplete returned enough data.
         showToast("Added from search!");
-        return; // For safety, we will implement this fully in the next iteration if needed
+        return; 
     }
     
     const displayVariant = (p.variants && p.variants.length > 0) ? p.variants[0] : { price: 0, weightOrVolume: 'N/A' }; 
@@ -272,16 +327,33 @@ function updateCardActionUI(productId) {
     const item = cart.find(i => i._id === productId); 
     const qty = item ? item.qty : 0; 
     
+    container.innerHTML = ''; // Safe clearance
+    
     if (qty === 0) { 
-        container.innerHTML = `<button class="add-btn" onclick="quickAdd('${productId}')">ADD</button>`; 
+        const btn = document.createElement('button');
+        btn.className = 'add-btn';
+        btn.textContent = 'ADD';
+        btn.onclick = () => quickAdd(productId);
+        container.appendChild(btn);
     } else { 
-        container.innerHTML = `
-            <div class="stepper">
-                <button onclick="adjustQty('${productId}',-1)">−</button>
-                <span>${qty}</span>
-                <button onclick="adjustQty('${productId}',1)">+</button>
-            </div>
-        `; 
+        const stepper = document.createElement('div');
+        stepper.className = 'stepper';
+        
+        const minusBtn = document.createElement('button');
+        minusBtn.textContent = '−';
+        minusBtn.onclick = () => adjustQty(productId, -1);
+        
+        const span = document.createElement('span');
+        span.textContent = qty;
+        
+        const plusBtn = document.createElement('button');
+        plusBtn.textContent = '+';
+        plusBtn.onclick = () => adjustQty(productId, 1);
+        
+        stepper.appendChild(minusBtn);
+        stepper.appendChild(span);
+        stepper.appendChild(plusBtn);
+        container.appendChild(stepper);
     } 
 }
 
@@ -290,8 +362,8 @@ function updateGlobalCartUI() {
     const subtotal = cart.reduce((s, i) => s + (i.currentPrice * i.qty), 0); 
     
     if (totalItems > 0) { 
-        document.getElementById('ribbon-items-count').innerText = `${totalItems} ITEM${totalItems > 1 ? 'S' : ''}`; 
-        document.getElementById('ribbon-total-price').innerText = `₹${subtotal}`; 
+        document.getElementById('ribbon-items-count').textContent = `${totalItems} ITEM${totalItems > 1 ? 'S' : ''}`; 
+        document.getElementById('ribbon-total-price').textContent = `₹${subtotal}`; 
         cartRibbon.classList.remove('hidden'); 
     } else { 
         cartRibbon.classList.add('hidden'); 
@@ -300,40 +372,83 @@ function updateGlobalCartUI() {
     cartItemsContainer.innerHTML = ''; 
     
     if (cart.length === 0) { 
-        cartItemsContainer.innerHTML = '<p style="text-align:center; color:#94A3B8; margin-top:40px;">Your cart is empty.</p>'; 
-        document.getElementById('cart-subtotal').innerText = '₹0'; 
-        document.getElementById('cart-total').innerText = '₹0'; 
+        const emptyCart = document.createElement('p');
+        emptyCart.style.cssText = "text-align:center; color:#94A3B8; margin-top:40px;";
+        emptyCart.textContent = "Your cart is empty.";
+        cartItemsContainer.appendChild(emptyCart);
+        document.getElementById('cart-subtotal').textContent = '₹0'; 
+        document.getElementById('cart-total').textContent = '₹0'; 
         return; 
     } 
     
+    const fragment = document.createDocumentFragment();
+
     cart.forEach(item => { 
         const row = document.createElement('div'); 
-        row.classList.add('cart-item-row'); 
+        row.className = 'cart-item-row'; 
         
+        // Image Container
+        const imgDiv = document.createElement('div');
+        imgDiv.style.cssText = "display:flex; align-items:center; justify-content:center; width:32px;";
         const optimizedThumb = optimizeCloudinaryUrl(item.imageUrl, 100);
-        const thumb = item.imageUrl 
-            ? `<img src="${optimizedThumb}" style="width:32px; height:32px; border-radius:6px; object-fit:contain;">` 
-            : `<div style="font-size:24px;">📦</div>`;
-            
-        row.innerHTML = `
-            <div style="display:flex; align-items:center; justify-content:center; width:32px;">${thumb}</div>
-            <div class="cart-item-info">
-                <div class="cart-item-title">${item.name}</div>
-                <div class="cart-item-price">₹${item.currentPrice}</div>
-            </div>
-            <div class="action-container" style="width:72px;">
-                <div class="stepper">
-                    <button onclick="adjustQty('${item._id}',-1)">−</button>
-                    <span>${item.qty}</span>
-                    <button onclick="adjustQty('${item._id}',1)">+</button>
-                </div>
-            </div>
-        `; 
-        cartItemsContainer.appendChild(row); 
+        
+        if (item.imageUrl) {
+            const img = document.createElement('img');
+            img.src = optimizedThumb;
+            img.style.cssText = "width:32px; height:32px; border-radius:6px; object-fit:contain;";
+            imgDiv.appendChild(img);
+        } else {
+            const box = document.createElement('div');
+            box.style.fontSize = "24px";
+            box.textContent = "📦";
+            imgDiv.appendChild(box);
+        }
+
+        // Info Block
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'cart-item-info';
+        const title = document.createElement('div');
+        title.className = 'cart-item-title';
+        title.textContent = item.name;
+        const price = document.createElement('div');
+        price.className = 'cart-item-price';
+        price.textContent = `₹${item.currentPrice}`;
+        infoDiv.appendChild(title);
+        infoDiv.appendChild(price);
+
+        // Action Block
+        const actionDiv = document.createElement('div');
+        actionDiv.className = 'action-container';
+        actionDiv.style.width = '72px';
+        const stepper = document.createElement('div');
+        stepper.className = 'stepper';
+        
+        const mBtn = document.createElement('button');
+        mBtn.textContent = '−';
+        mBtn.onclick = () => adjustQty(item._id, -1);
+        
+        const qSpan = document.createElement('span');
+        qSpan.textContent = item.qty;
+        
+        const pBtn = document.createElement('button');
+        pBtn.textContent = '+';
+        pBtn.onclick = () => adjustQty(item._id, 1);
+        
+        stepper.appendChild(mBtn);
+        stepper.appendChild(qSpan);
+        stepper.appendChild(pBtn);
+        actionDiv.appendChild(stepper);
+
+        row.appendChild(imgDiv);
+        row.appendChild(infoDiv);
+        row.appendChild(actionDiv);
+        fragment.appendChild(row);
     }); 
     
-    document.getElementById('cart-subtotal').innerText = `₹${subtotal}`; 
-    document.getElementById('cart-total').innerText = `₹${subtotal + DELIVERY_FEE}`; 
+    cartItemsContainer.appendChild(fragment);
+    
+    document.getElementById('cart-subtotal').textContent = `₹${subtotal}`; 
+    document.getElementById('cart-total').textContent = `₹${subtotal + DELIVERY_FEE}`; 
 }
 
 function openCart() { 
@@ -366,15 +481,14 @@ async function placeOrder() {
     } 
     
     isProcessingOrder = true;
-    const checkoutBtn = document.querySelector('.checkout-btn'); 
-    checkoutBtn.innerText = 'Processing...'; 
+    const checkoutBtn = document.getElementById('btn-checkout'); 
+    checkoutBtn.textContent = 'Processing...'; 
     checkoutBtn.disabled = true; 
     
     const subtotal = cart.reduce((s, i) => s + (i.currentPrice * i.qty), 0); 
     const finalTotal = subtotal + DELIVERY_FEE; 
     const scheduleTime = selectedDeliveryType === 'Routine' ? document.getElementById('schedule-time').value : 'ASAP'; 
     
-    // OPTIMIZATION: Idempotency Key Generation prevents double-billing if the user taps "Place Order" multiple times on a slow connection
     const idempotencyKey = 'ONLINE-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9);
 
     try { 
@@ -415,7 +529,7 @@ async function placeOrder() {
     } catch(e) { 
         showToast('Network error.'); 
     } finally { 
-        checkoutBtn.innerText = 'Place Order'; 
+        checkoutBtn.textContent = 'Place Order'; 
         checkoutBtn.disabled = false; 
         isProcessingOrder = false; 
     } 
@@ -425,11 +539,19 @@ async function checkOrderStatus() {
     const savedOrderId = localStorage.getItem('dailyPick_activeOrderId'); 
     
     if (!savedOrderId) {
-        trackingContent.innerHTML = '<p class="empty-state">You have no active orders right now.</p>';
+        trackingContent.innerHTML = '';
+        const emp = document.createElement('p');
+        emp.className = 'empty-state';
+        emp.textContent = 'You have no active orders right now.';
+        trackingContent.appendChild(emp);
         return;
     } 
     
-    trackingContent.innerHTML = '<p class="empty-state">Fetching live status...</p>'; 
+    trackingContent.innerHTML = '';
+    const loading = document.createElement('p');
+    loading.className = 'empty-state';
+    loading.textContent = 'Fetching live status...';
+    trackingContent.appendChild(loading);
     
     try { 
         const res = await storeFetchWithAuth(`${BACKEND_URL}/api/orders/${savedOrderId}`); 
@@ -439,21 +561,42 @@ async function checkOrderStatus() {
             const order = result.data; 
             const timeString = new Date(order.createdAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); 
             
-            const scheduleBadge = order.deliveryType === 'Routine' 
-                ? `<div style="margin-top:12px; font-size:12px; color:#64748B; font-weight:700;">📅 Routine: ${order.scheduleTime}</div>` 
-                : `<div style="margin-top:12px; font-size:12px; color:#16A34A; font-weight:700;">⚡ Instant Delivery</div>`; 
-            
             const displayId = order.orderNumber || '#' + (order._id).toString().slice(-4).toUpperCase();
 
-            trackingContent.innerHTML = `
-                <div class="tracking-card">
-                    <h3>Order ${displayId}</h3>
-                    <p>Placed at ${timeString}</p>
-                    <div class="status-badge ${order.status === 'Dispatched' ? 'dispatched' : ''}">${order.status}</div>
-                    ${scheduleBadge}
-                    <div style="margin-top:24px; font-size:14px; font-weight:700;">To Pay: ₹${order.totalAmount} (COD)</div>
-                </div>
-            `; 
+            trackingContent.innerHTML = ''; // Safe Clear
+            
+            const card = document.createElement('div');
+            card.className = 'tracking-card';
+            
+            const h3 = document.createElement('h3');
+            h3.textContent = `Order ${displayId}`;
+            
+            const pTime = document.createElement('p');
+            pTime.textContent = `Placed at ${timeString}`;
+            
+            const statusBadge = document.createElement('div');
+            statusBadge.className = `status-badge ${order.status === 'Dispatched' ? 'dispatched' : ''}`;
+            statusBadge.textContent = order.status;
+            
+            const schedBadge = document.createElement('div');
+            if (order.deliveryType === 'Routine') {
+                schedBadge.style.cssText = 'margin-top:12px; font-size:12px; color:#64748B; font-weight:700;';
+                schedBadge.textContent = `📅 Routine: ${order.scheduleTime}`;
+            } else {
+                schedBadge.style.cssText = 'margin-top:12px; font-size:12px; color:#16A34A; font-weight:700;';
+                schedBadge.textContent = '⚡ Instant Delivery';
+            }
+            
+            const totalDiv = document.createElement('div');
+            totalDiv.style.cssText = 'margin-top:24px; font-size:14px; font-weight:700;';
+            totalDiv.textContent = `To Pay: ₹${order.totalAmount} (COD)`;
+            
+            card.appendChild(h3);
+            card.appendChild(pTime);
+            card.appendChild(statusBadge);
+            card.appendChild(schedBadge);
+            card.appendChild(totalDiv);
+            trackingContent.appendChild(card);
             
             if (order.status !== 'Dispatched' && !trackingStreamController) {
                 const token = localStorage.getItem('dailyPick_customerToken') || '';
@@ -514,21 +657,60 @@ async function checkOrderStatus() {
                 })();
             }
         } else { 
-            trackingContent.innerHTML = '<p class="empty-state">Order details could not be found.</p>'; 
+            trackingContent.innerHTML = '';
+            const errP = document.createElement('p');
+            errP.className = 'empty-state';
+            errP.textContent = 'Order details could not be found.';
+            trackingContent.appendChild(errP);
         } 
     } catch(e) { 
-        trackingContent.innerHTML = '<p class="empty-state">Network error checking status.</p>'; 
+        trackingContent.innerHTML = '';
+        const netErr = document.createElement('p');
+        netErr.className = 'empty-state';
+        netErr.textContent = 'Network error checking status.';
+        trackingContent.appendChild(netErr);
     } 
 }
 
 function showToast(message) { 
     const toast = document.createElement('div'); 
     toast.classList.add('toast'); 
-    toast.innerText = message; 
+    toast.textContent = message; 
     toastContainer.appendChild(toast); 
     setTimeout(() => toast.remove(), 2500); 
 }
 
-// Initialize Application
-fetchCategories(); 
-fetchProducts();
+// --- DOM Event Bindings ---
+document.addEventListener('DOMContentLoaded', () => {
+    // Top Bar & Search
+    document.getElementById('search-input').addEventListener('input', handleSearch);
+    
+    // Quick Nav Elements
+    document.querySelectorAll('[data-action="filter-cat"]').forEach(el => {
+        el.addEventListener('click', () => filterCategory(el.getAttribute('data-value')));
+    });
+    
+    document.querySelectorAll('[data-action="filter-tag"]').forEach(el => {
+        el.addEventListener('click', () => filterByTag(el.getAttribute('data-tag'), el.getAttribute('data-title')));
+    });
+    
+    // Button bindings
+    document.getElementById('btn-view-all').addEventListener('click', () => filterCategory('All'));
+    document.getElementById('btn-refresh-orders').addEventListener('click', checkOrderStatus);
+    document.getElementById('cart-ribbon').addEventListener('click', openCart);
+    document.getElementById('btn-close-cart').addEventListener('click', closeCart);
+    document.getElementById('btn-checkout').addEventListener('click', placeOrder);
+    
+    // Delivery Tabs
+    document.getElementById('tab-instant').addEventListener('click', () => setDeliveryType('Instant'));
+    document.getElementById('tab-routine').addEventListener('click', () => setDeliveryType('Routine'));
+    
+    // Bottom Nav
+    document.getElementById('nav-shop').addEventListener('click', () => switchView('shop'));
+    document.getElementById('nav-orders').addEventListener('click', () => switchView('orders'));
+    document.getElementById('nav-cats').addEventListener('click', () => window.scrollTo({top: 0, behavior: 'smooth'}));
+
+    // Initialize Application Data
+    fetchCategories(); 
+    fetchProducts();
+});
