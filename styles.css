@@ -26,7 +26,11 @@ body {
 .hidden { display: none !important; }
 
 .view-section { display: none; }
-.view-section.active { display: block; animation: fadeIn 0.2s ease; }
+.view-section.active { 
+    display: block; 
+    animation: fadeIn 0.2s ease; 
+    will-change: transform, opacity; 
+}
 
 @keyframes fadeIn { 
     from { opacity: 0; transform: translateY(5px); } 
@@ -369,6 +373,7 @@ body {
     display: flex; 
     align-items: center; 
     justify-content: center; 
+    cursor: pointer;
 }
 
 .stepper button:active { 
@@ -435,6 +440,7 @@ body {
     transform: translateY(0); 
     transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
     cursor: pointer; 
+    will-change: transform;
 }
 
 .cart-ribbon.hidden { 
@@ -459,6 +465,7 @@ body {
     flex-direction: column; 
     transform: translateX(100%); 
     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); 
+    will-change: transform;
 }
 
 .cart-view.active { transform: translateX(0); }
@@ -473,7 +480,7 @@ body {
 }
 
 .cart-header h2 { font-size: 16px; font-weight: 800; }
-.back-btn { background: none; border: none; font-size: 14px; font-weight: 700; color: var(--text-main); }
+.back-btn { background: none; border: none; font-size: 14px; font-weight: 700; color: var(--text-main); cursor: pointer; }
 
 .cart-items { 
     flex: 1; 
@@ -664,6 +671,7 @@ body {
     font-weight: 600; 
     box-shadow: 0 4px 12px rgba(0,0,0,0.2); 
     animation: slideUp 0.2s ease, fadeOut 0.2s ease 2.7s forwards; 
+    will-change: transform, opacity;
 }
 
 /* BOTTOM NAVIGATION */
