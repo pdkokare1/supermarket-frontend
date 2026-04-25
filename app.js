@@ -251,7 +251,8 @@ function renderProducts(productsToRender) {
         
         const priceDiv = document.createElement('div');
         priceDiv.className = 'product-price';
-        priceDiv.textContent = `₹${displayVariant.price}`;
+        // CURRENCY UPDATE
+        priceDiv.textContent = `Rs ${displayVariant.price}`;
         
         const actionContainer = document.createElement('div');
         actionContainer.className = 'action-container';
@@ -346,7 +347,6 @@ function quickAdd(productId) {
     const displayVariant = (p.variants && p.variants.length > 0) ? p.variants[0] : { price: 0, weightOrVolume: 'N/A', storeId: null }; 
 
     // --- NEW: THE ISOLATED CART GUARD ---
-    // If the cart has items, and the incoming item's storeId does NOT match the cart's existing storeId
     if (cart.length > 0 && displayVariant.storeId && cart[0].storeId && cart[0].storeId !== displayVariant.storeId) {
         pendingProductToAdd = { ...p, targetVariant: displayVariant };
         document.getElementById('isolation-modal').classList.remove('hidden');
@@ -367,8 +367,8 @@ window.cancelClearCart = function() {
 
 window.confirmClearCart = function() {
     const oldCartIds = cart.map(i => i._id);
-    cart = []; // Empty the cart
-    oldCartIds.forEach(id => updateCardActionUI(id)); // Reset UI buttons for old items
+    cart = []; 
+    oldCartIds.forEach(id => updateCardActionUI(id)); 
 
     document.getElementById('isolation-modal').classList.add('hidden');
     
@@ -440,7 +440,8 @@ function updateGlobalCartUI() {
     
     if (totalItems > 0) { 
         document.getElementById('ribbon-items-count').textContent = `${totalItems} ITEM${totalItems > 1 ? 'S' : ''}`; 
-        document.getElementById('ribbon-total-price').textContent = `₹${subtotal}`; 
+        // CURRENCY UPDATE
+        document.getElementById('ribbon-total-price').textContent = `Rs ${subtotal}`; 
         cartRibbon.classList.remove('hidden'); 
     } else { 
         cartRibbon.classList.add('hidden'); 
@@ -453,8 +454,9 @@ function updateGlobalCartUI() {
         emptyCart.style.cssText = "text-align:center; color:#94A3B8; margin-top:40px;";
         emptyCart.textContent = "Your cart is empty.";
         cartItemsContainer.appendChild(emptyCart);
-        document.getElementById('cart-subtotal').textContent = '₹0'; 
-        document.getElementById('cart-total').textContent = '₹0'; 
+        // CURRENCY UPDATE
+        document.getElementById('cart-subtotal').textContent = 'Rs 0'; 
+        document.getElementById('cart-total').textContent = 'Rs 0'; 
         return; 
     } 
     
@@ -487,7 +489,8 @@ function updateGlobalCartUI() {
         title.textContent = item.name;
         const price = document.createElement('div');
         price.className = 'cart-item-price';
-        price.textContent = `₹${item.currentPrice}`;
+        // CURRENCY UPDATE
+        price.textContent = `Rs ${item.currentPrice}`;
         infoDiv.appendChild(title);
         infoDiv.appendChild(price);
 
@@ -521,8 +524,9 @@ function updateGlobalCartUI() {
     
     cartItemsContainer.appendChild(fragment);
     
-    document.getElementById('cart-subtotal').textContent = `₹${subtotal}`; 
-    document.getElementById('cart-total').textContent = `₹${subtotal + DELIVERY_FEE}`; 
+    // CURRENCY UPDATE
+    document.getElementById('cart-subtotal').textContent = `Rs ${subtotal}`; 
+    document.getElementById('cart-total').textContent = `Rs ${subtotal + DELIVERY_FEE}`; 
 }
 
 function openCart() { 
@@ -583,7 +587,7 @@ async function placeOrder() {
                 totalAmount: finalTotal, 
                 deliveryType: selectedDeliveryType, 
                 scheduleTime: scheduleTime,
-                storeId: targetStoreId // Critical for the new backend isolation engine
+                storeId: targetStoreId 
             }) 
         }); 
         
@@ -667,7 +671,8 @@ async function checkOrderStatus() {
             
             const totalDiv = document.createElement('div');
             totalDiv.style.cssText = 'margin-top:24px; font-size:14px; font-weight:700;';
-            totalDiv.textContent = `To Pay: ₹${order.totalAmount} (COD)`;
+            // CURRENCY UPDATE
+            totalDiv.textContent = `To Pay: Rs ${order.totalAmount} (COD)`;
             
             card.appendChild(h3);
             card.appendChild(pTime);
