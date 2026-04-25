@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://dailypick-backend-production-05d6.up.railway.app; img-src 'self' data: https://res.cloudinary.com; script-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://dailypick-backend-production-05d6.up.railway.app https://apis.google.com https://www.googleapis.com; img-src 'self' data: https://res.cloudinary.com; script-src 'self' https://www.gstatic.com 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; frame-src https://www.google.com https://recaptcha.net;">
     
     <title>DailyPick | Quick Market</title>
     
@@ -27,7 +27,7 @@
             </div>
             <div class="user-actions">
                 <div class="wallet-icon">💳 Rs 0</div>
-                <div class="profile-icon" aria-label="Profile">👤</div>
+                <div class="profile-icon" aria-label="Profile" style="cursor: pointer;">👤</div>
             </div>
         </div>
         
@@ -162,6 +162,31 @@
         </div>
     </div>
 
+    <div id="customer-login-modal" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
+        <div style="background: white; padding: 24px; border-radius: 16px; width: 90%; max-width: 360px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 style="margin: 0; color: #0f172a; font-weight: 800;">Login / Sign Up</h3>
+                <button onclick="closeCustomerLogin()" style="background: none; border: none; font-size: 20px; cursor: pointer;">✕</button>
+            </div>
+            
+            <div id="auth-step-1">
+                <p style="color: #64748B; font-size: 14px; margin-bottom: 16px;">Enter your phone number to receive a secure OTP.</p>
+                <input type="tel" id="auth-phone-input" placeholder="+91 9876543210" style="width: 100%; padding: 12px; margin-bottom: 16px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 16px; font-weight: 600;">
+                <div id="recaptcha-container" style="margin-bottom: 16px; display: flex; justify-content: center;"></div>
+                <button onclick="requestOTP()" id="btn-request-otp" style="width: 100%; padding: 14px; background: #ea580c; color: white; border: none; border-radius: 8px; font-weight: 800; cursor: pointer;">Send OTP</button>
+            </div>
+
+            <div id="auth-step-2" class="hidden">
+                <p style="color: #64748B; font-size: 14px; margin-bottom: 16px;">Enter the 6-digit code sent to your phone.</p>
+                <input type="text" id="auth-otp-input" placeholder="000000" maxlength="6" style="width: 100%; padding: 12px; margin-bottom: 16px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 24px; letter-spacing: 4px; text-align: center; font-weight: 800;">
+                <button onclick="verifyOTP()" id="btn-verify-otp" style="width: 100%; padding: 14px; background: #10b981; color: white; border: none; border-radius: 8px; font-weight: 800; cursor: pointer;">Verify & Login</button>
+                <button onclick="resetAuth()" style="width: 100%; padding: 12px; background: none; color: #64748B; border: none; margin-top: 8px; cursor: pointer; font-weight: 600;">Change Number</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
     <nav class="bottom-nav">
         <button id="nav-shop" class="nav-item active" aria-label="Home"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
         <button id="nav-orders" class="nav-item" aria-label="Order Again"><span class="nav-icon">🛍️</span><span class="nav-label">Order Again</span></button>
@@ -169,6 +194,9 @@
         <button class="nav-item" aria-label="Print"><span class="nav-icon">🖨️</span><span class="nav-label">Print</span></button>
     </nav>
 
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    
     <script src="app.js"></script>
 </body>
 </html>
