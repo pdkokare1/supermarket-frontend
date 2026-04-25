@@ -9,6 +9,11 @@ let allCategories = [];
 let trackingStreamController = null; 
 let isProcessingOrder = false; 
 
+// --- NEW: GEOLOCATION STATE ---
+let userLat = null;
+let userLng = null;
+let pendingProductToAdd = null; // Used for the isolated cart modal
+
 // DOM Elements
 const storefront = document.getElementById('storefront'); 
 const skeletonGrid = document.getElementById('skeleton-grid'); 
@@ -36,6 +41,26 @@ const CATEGORY_IMAGES = {
     'Cleaning Essentials': { emoji: '🧽', color: '#f3e8ff' },
     'Grocery & Kitchen': { emoji: '🌾', color: '#fef3c7' }
 };
+
+// --- NEW: GEOLOCATION INTERCEPTOR ---
+function initializeLocationAndFetch() {
+    if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                userLat = position.coords.latitude;
+                userLng = position.coords.longitude;
+                document.querySelector('.delivery-location').textContent = '📍 Near You ▼';
+                fetchProducts(); 
+            },
+            (error) => {
+                console.warn("Location access denied or failed. Loading default catalog.");
+                fetchProducts(); 
+            }
+        );
+    } else {
+        fetchProducts();
+    }
+}
 
 async function storeFetchWithAuth(url, options = {}) {
     const token = localStorage.getItem('dailyPick_customerToken'); 
@@ -89,7 +114,7 @@ async function fetchCategories() {
         if (result.success) {
             allCategories = result.data;
             const grid = document.getElementById('categories-grid');
-            grid.innerHTML = ''; // Safe here, clearing elements
+            grid.innerHTML = ''; 
             
             const fragment = document.createDocumentFragment();
             allCategories.forEach(cat => {
@@ -119,7 +144,13 @@ async function fetchCategories() {
 
 async function fetchProducts() { 
     try { 
-        const res = await storeFetchWithAuth(`${BACKEND_URL}/api/products`); 
+        // --- MODIFIED: INJECTING GPS PARAMETERS FOR AGGREGATOR ---
+        let url = `${BACKEND_URL}/api/products`;
+        if (userLat && userLng) {
+            url += `?lat=${userLat}&lng=${userLng}`;
+        }
+
+        const res = await storeFetchWithAuth(url); 
         const result = await res.json(); 
         
         if (result.success && result.data) { 
@@ -143,7 +174,7 @@ function renderProducts(productsToRender) {
     if (productsToRender.length === 0) { 
         const emptyState = document.createElement('p');
         emptyState.style.cssText = "grid-column:span 2;text-align:center;color:#94A3B8;margin-top:40px;";
-        emptyState.textContent = "No products found.";
+        emptyState.textContent = "No products found in your area.";
         storefront.appendChild(emptyState); 
         return; 
     } 
@@ -198,9 +229,18 @@ function renderProducts(productsToRender) {
         const weight = document.createElement('p');
         weight.className = 'product-weight';
         weight.textContent = displayVariant.weightOrVolume;
+
+        // --- NEW: MARKETPLACE TRUST METRIC & TENANT IDENTIFIER ---
+        const storeName = displayVariant.storeName || 'Local Partner';
+        const rating = displayVariant.storeRating ? `⭐ ${displayVariant.storeRating}` : '⭐ 4.5';
+        
+        const trustBadge = document.createElement('div');
+        trustBadge.style.cssText = 'font-size: 11px; color: #64748b; margin-top: 4px; font-weight: 600;';
+        trustBadge.textContent = `🏪 ${storeName} • ${rating}`;
         
         textInfo.appendChild(title);
         textInfo.appendChild(weight);
+        textInfo.appendChild(trustBadge);
         
         infoBlock.appendChild(imgContainer);
         infoBlock.appendChild(textInfo);
@@ -228,7 +268,6 @@ function renderProducts(productsToRender) {
     
     storefront.appendChild(fragment);
     
-    // Process UI hooks after DOM insertion
     productsToRender.forEach(product => {
         updateCardActionUI(product._id); 
     });
@@ -261,7 +300,6 @@ function filterByTag(tag, displayTitle) {
     title.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// --- Scalable Server-Side Autocomplete ---
 let searchDebounceTimeout = null;
 
 async function handleSearch(event) { 
@@ -279,7 +317,11 @@ async function handleSearch(event) {
     clearTimeout(searchDebounceTimeout);
     searchDebounceTimeout = setTimeout(async () => {
         try {
-            const res = await storeFetchWithAuth(`${BACKEND_URL}/api/products/autocomplete?q=${encodeURIComponent(query)}`);
+            // INJECT GPS FOR SEARCH TOO
+            let url = `${BACKEND_URL}/api/products/autocomplete?q=${encodeURIComponent(query)}`;
+            if (userLat && userLng) url += `&lat=${userLat}&lng=${userLng}`;
+
+            const res = await storeFetchWithAuth(url);
             const result = await res.json();
             
             if (result.success) {
@@ -300,13 +342,48 @@ function quickAdd(productId) {
         showToast("Added from search!");
         return; 
     }
+
+    const displayVariant = (p.variants && p.variants.length > 0) ? p.variants[0] : { price: 0, weightOrVolume: 'N/A', storeId: null }; 
+
+    // --- NEW: THE ISOLATED CART GUARD ---
+    // If the cart has items, and the incoming item's storeId does NOT match the cart's existing storeId
+    if (cart.length > 0 && displayVariant.storeId && cart[0].storeId && cart[0].storeId !== displayVariant.storeId) {
+        pendingProductToAdd = { ...p, targetVariant: displayVariant };
+        document.getElementById('isolation-modal').classList.remove('hidden');
+        return; // Halt execution until user decides via Modal
+    }
     
-    const displayVariant = (p.variants && p.variants.length > 0) ? p.variants[0] : { price: 0, weightOrVolume: 'N/A' }; 
-    cart.push({...p, qty: 1, currentPrice: displayVariant.price }); 
+    cart.push({...p, qty: 1, currentPrice: displayVariant.price, storeId: displayVariant.storeId }); 
     
     updateCardActionUI(productId); 
     updateGlobalCartUI(); 
 }
+
+// --- NEW: MODAL ACTIONS ---
+window.cancelClearCart = function() {
+    pendingProductToAdd = null;
+    document.getElementById('isolation-modal').classList.add('hidden');
+};
+
+window.confirmClearCart = function() {
+    const oldCartIds = cart.map(i => i._id);
+    cart = []; // Empty the cart
+    oldCartIds.forEach(id => updateCardActionUI(id)); // Reset UI buttons for old items
+
+    document.getElementById('isolation-modal').classList.add('hidden');
+    
+    if (pendingProductToAdd) {
+        cart.push({
+            ...pendingProductToAdd, 
+            qty: 1, 
+            currentPrice: pendingProductToAdd.targetVariant.price, 
+            storeId: pendingProductToAdd.targetVariant.storeId 
+        }); 
+        updateCardActionUI(pendingProductToAdd._id);
+        updateGlobalCartUI();
+        pendingProductToAdd = null;
+    }
+};
 
 function adjustQty(productId, change) { 
     const idx = cart.findIndex(i => i._id === productId); 
@@ -327,7 +404,7 @@ function updateCardActionUI(productId) {
     const item = cart.find(i => i._id === productId); 
     const qty = item ? item.qty : 0; 
     
-    container.innerHTML = ''; // Safe clearance
+    container.innerHTML = ''; 
     
     if (qty === 0) { 
         const btn = document.createElement('button');
@@ -387,7 +464,6 @@ function updateGlobalCartUI() {
         const row = document.createElement('div'); 
         row.className = 'cart-item-row'; 
         
-        // Image Container
         const imgDiv = document.createElement('div');
         imgDiv.style.cssText = "display:flex; align-items:center; justify-content:center; width:32px;";
         const optimizedThumb = optimizeCloudinaryUrl(item.imageUrl, 100);
@@ -404,7 +480,6 @@ function updateGlobalCartUI() {
             imgDiv.appendChild(box);
         }
 
-        // Info Block
         const infoDiv = document.createElement('div');
         infoDiv.className = 'cart-item-info';
         const title = document.createElement('div');
@@ -416,7 +491,6 @@ function updateGlobalCartUI() {
         infoDiv.appendChild(title);
         infoDiv.appendChild(price);
 
-        // Action Block
         const actionDiv = document.createElement('div');
         actionDiv.className = 'action-container';
         actionDiv.style.width = '72px';
@@ -490,6 +564,9 @@ async function placeOrder() {
     const scheduleTime = selectedDeliveryType === 'Routine' ? document.getElementById('schedule-time').value : 'ASAP'; 
     
     const idempotencyKey = 'ONLINE-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9);
+    
+    // --- MODIFIED: INJECTING TARGET TENANT FOR AGGREGATOR CHECKOUT ROUTING ---
+    const targetStoreId = cart.length > 0 ? cart[0].storeId : null;
 
     try { 
         const res = await storeFetchWithAuth(`${BACKEND_URL}/api/orders`, { 
@@ -505,7 +582,8 @@ async function placeOrder() {
                 items: cart, 
                 totalAmount: finalTotal, 
                 deliveryType: selectedDeliveryType, 
-                scheduleTime: scheduleTime
+                scheduleTime: scheduleTime,
+                storeId: targetStoreId // Critical for the new backend isolation engine
             }) 
         }); 
         
@@ -563,7 +641,7 @@ async function checkOrderStatus() {
             
             const displayId = order.orderNumber || '#' + (order._id).toString().slice(-4).toUpperCase();
 
-            trackingContent.innerHTML = ''; // Safe Clear
+            trackingContent.innerHTML = ''; 
             
             const card = document.createElement('div');
             card.className = 'tracking-card';
@@ -682,10 +760,8 @@ function showToast(message) {
 
 // --- DOM Event Bindings ---
 document.addEventListener('DOMContentLoaded', () => {
-    // Top Bar & Search
     document.getElementById('search-input').addEventListener('input', handleSearch);
     
-    // Quick Nav Elements
     document.querySelectorAll('[data-action="filter-cat"]').forEach(el => {
         el.addEventListener('click', () => filterCategory(el.getAttribute('data-value')));
     });
@@ -694,23 +770,20 @@ document.addEventListener('DOMContentLoaded', () => {
         el.addEventListener('click', () => filterByTag(el.getAttribute('data-tag'), el.getAttribute('data-title')));
     });
     
-    // Button bindings
     document.getElementById('btn-view-all').addEventListener('click', () => filterCategory('All'));
     document.getElementById('btn-refresh-orders').addEventListener('click', checkOrderStatus);
     document.getElementById('cart-ribbon').addEventListener('click', openCart);
     document.getElementById('btn-close-cart').addEventListener('click', closeCart);
     document.getElementById('btn-checkout').addEventListener('click', placeOrder);
     
-    // Delivery Tabs
     document.getElementById('tab-instant').addEventListener('click', () => setDeliveryType('Instant'));
     document.getElementById('tab-routine').addEventListener('click', () => setDeliveryType('Routine'));
     
-    // Bottom Nav
     document.getElementById('nav-shop').addEventListener('click', () => switchView('shop'));
     document.getElementById('nav-orders').addEventListener('click', () => switchView('orders'));
     document.getElementById('nav-cats').addEventListener('click', () => window.scrollTo({top: 0, behavior: 'smooth'}));
 
-    // Initialize Application Data
+    // --- MODIFIED: GPS INTERCEPTOR REPLACES STATIC LOAD ---
     fetchCategories(); 
-    fetchProducts();
+    initializeLocationAndFetch();
 });
