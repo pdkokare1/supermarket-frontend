@@ -9,10 +9,10 @@ let allCategories = [];
 let trackingStreamController = null; 
 let isProcessingOrder = false; 
 
-// --- NEW: GEOLOCATION STATE ---
+// GEOLOCATION STATE
 let userLat = null;
 let userLng = null;
-let pendingProductToAdd = null; // Used for the isolated cart modal
+let pendingProductToAdd = null;
 
 // DOM Elements
 const storefront = document.getElementById('storefront'); 
@@ -42,7 +42,119 @@ const CATEGORY_IMAGES = {
     'Grocery & Kitchen': { emoji: '🌾', color: '#fef3c7' }
 };
 
-// --- NEW: GEOLOCATION INTERCEPTOR ---
+// --- NEW: FIREBASE AUTHENTICATION CONFIGURATION ---
+const firebaseConfig = {
+    // REPLACEME: Inject your Firebase Web Credentials here before Vercel deploy
+    apiKey: "YOUR_FIREBASE_API_KEY",
+    authDomain: "your-project.firebaseapp.com",
+    projectId: "your-project"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+let confirmationResult = null;
+
+function openCustomerLogin() {
+    const token = localStorage.getItem('dailyPick_customerToken');
+    if (token) {
+        if (confirm("You are already logged in. Do you want to logout?")) {
+            logoutCustomer();
+        }
+    } else {
+        document.getElementById('customer-login-modal').classList.remove('hidden');
+        if (!window.recaptchaVerifier) {
+            window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+                'size': 'normal',
+                'callback': (response) => {
+                    // reCAPTCHA solved, allow signInWithPhoneNumber.
+                }
+            });
+            window.recaptchaVerifier.render();
+        }
+    }
+}
+
+function closeCustomerLogin() {
+    document.getElementById('customer-login-modal').classList.add('hidden');
+    resetAuth();
+}
+
+function resetAuth() {
+    document.getElementById('auth-step-1').classList.remove('hidden');
+    document.getElementById('auth-step-2').classList.add('hidden');
+    document.getElementById('auth-phone-input').value = '';
+    document.getElementById('auth-otp-input').value = '';
+}
+
+function requestOTP() {
+    const phoneNumber = document.getElementById('auth-phone-input').value.trim();
+    if (!phoneNumber || phoneNumber.length < 10) return showToast("Enter a valid phone number with country code (e.g., +91).");
+
+    const btn = document.getElementById('btn-request-otp');
+    btn.textContent = 'Sending...';
+    btn.disabled = true;
+
+    auth.signInWithPhoneNumber(phoneNumber, window.recaptchaVerifier)
+        .then((confResult) => {
+            confirmationResult = confResult;
+            document.getElementById('auth-step-1').classList.add('hidden');
+            document.getElementById('auth-step-2').classList.remove('hidden');
+            showToast("OTP Sent!");
+        }).catch((error) => {
+            console.error(error);
+            showToast("Error sending OTP. Check number format or Recaptcha.");
+            if (window.recaptchaVerifier) window.recaptchaVerifier.render();
+        }).finally(() => {
+            btn.textContent = 'Send OTP';
+            btn.disabled = false;
+        });
+}
+
+function verifyOTP() {
+    const code = document.getElementById('auth-otp-input').value.trim();
+    if (code.length !== 6) return showToast("Enter the 6-digit OTP.");
+
+    const btn = document.getElementById('btn-verify-otp');
+    btn.textContent = 'Verifying...';
+    btn.disabled = true;
+
+    confirmationResult.confirm(code).then((result) => {
+        const user = result.user;
+        return user.getIdToken();
+    }).then((idToken) => {
+        localStorage.setItem('dailyPick_customerToken', idToken);
+        showToast("Login Successful! 🎉");
+        closeCustomerLogin();
+        updateAuthUI();
+    }).catch((error) => {
+        showToast("Invalid OTP.");
+        console.error(error);
+    }).finally(() => {
+        btn.textContent = 'Verify & Login';
+        btn.disabled = false;
+    });
+}
+
+function logoutCustomer() {
+    auth.signOut().then(() => {
+        localStorage.removeItem('dailyPick_customerToken');
+        showToast("Logged out successfully.");
+        updateAuthUI();
+    });
+}
+
+function updateAuthUI() {
+    const token = localStorage.getItem('dailyPick_customerToken');
+    const profileIcon = document.querySelector('.profile-icon');
+    if (token) {
+        profileIcon.textContent = '🟢'; // Logged in indicator
+    } else {
+        profileIcon.textContent = '👤'; // Logged out indicator
+    }
+}
+
+// --- EXISTING APP LOGIC ---
+
 function initializeLocationAndFetch() {
     if ("geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition(
@@ -144,7 +256,6 @@ async function fetchCategories() {
 
 async function fetchProducts() { 
     try { 
-        // --- MODIFIED: INJECTING GPS PARAMETERS FOR AGGREGATOR ---
         let url = `${BACKEND_URL}/api/products`;
         if (userLat && userLng) {
             url += `?lat=${userLat}&lng=${userLng}`;
@@ -230,7 +341,6 @@ function renderProducts(productsToRender) {
         weight.className = 'product-weight';
         weight.textContent = displayVariant.weightOrVolume;
 
-        // --- NEW: MARKETPLACE TRUST METRIC & TENANT IDENTIFIER ---
         const storeName = displayVariant.storeName || 'Local Partner';
         const rating = displayVariant.storeRating ? `⭐ ${displayVariant.storeRating}` : '⭐ 4.5';
         
@@ -251,7 +361,6 @@ function renderProducts(productsToRender) {
         
         const priceDiv = document.createElement('div');
         priceDiv.className = 'product-price';
-        // CURRENCY UPDATE
         priceDiv.textContent = `Rs ${displayVariant.price}`;
         
         const actionContainer = document.createElement('div');
@@ -261,7 +370,6 @@ function renderProducts(productsToRender) {
         priceRow.appendChild(priceDiv);
         priceRow.appendChild(actionContainer);
         
-        // Assemble Card
         card.appendChild(infoBlock);
         card.appendChild(priceRow);
         fragment.appendChild(card);
@@ -318,7 +426,6 @@ async function handleSearch(event) {
     clearTimeout(searchDebounceTimeout);
     searchDebounceTimeout = setTimeout(async () => {
         try {
-            // INJECT GPS FOR SEARCH TOO
             let url = `${BACKEND_URL}/api/products/autocomplete?q=${encodeURIComponent(query)}`;
             if (userLat && userLng) url += `&lat=${userLat}&lng=${userLng}`;
 
@@ -346,11 +453,10 @@ function quickAdd(productId) {
 
     const displayVariant = (p.variants && p.variants.length > 0) ? p.variants[0] : { price: 0, weightOrVolume: 'N/A', storeId: null }; 
 
-    // --- NEW: THE ISOLATED CART GUARD ---
     if (cart.length > 0 && displayVariant.storeId && cart[0].storeId && cart[0].storeId !== displayVariant.storeId) {
         pendingProductToAdd = { ...p, targetVariant: displayVariant };
         document.getElementById('isolation-modal').classList.remove('hidden');
-        return; // Halt execution until user decides via Modal
+        return; 
     }
     
     cart.push({...p, qty: 1, currentPrice: displayVariant.price, storeId: displayVariant.storeId }); 
@@ -359,7 +465,6 @@ function quickAdd(productId) {
     updateGlobalCartUI(); 
 }
 
-// --- NEW: MODAL ACTIONS ---
 window.cancelClearCart = function() {
     pendingProductToAdd = null;
     document.getElementById('isolation-modal').classList.add('hidden');
@@ -440,7 +545,6 @@ function updateGlobalCartUI() {
     
     if (totalItems > 0) { 
         document.getElementById('ribbon-items-count').textContent = `${totalItems} ITEM${totalItems > 1 ? 'S' : ''}`; 
-        // CURRENCY UPDATE
         document.getElementById('ribbon-total-price').textContent = `Rs ${subtotal}`; 
         cartRibbon.classList.remove('hidden'); 
     } else { 
@@ -454,7 +558,6 @@ function updateGlobalCartUI() {
         emptyCart.style.cssText = "text-align:center; color:#94A3B8; margin-top:40px;";
         emptyCart.textContent = "Your cart is empty.";
         cartItemsContainer.appendChild(emptyCart);
-        // CURRENCY UPDATE
         document.getElementById('cart-subtotal').textContent = 'Rs 0'; 
         document.getElementById('cart-total').textContent = 'Rs 0'; 
         return; 
@@ -489,7 +592,6 @@ function updateGlobalCartUI() {
         title.textContent = item.name;
         const price = document.createElement('div');
         price.className = 'cart-item-price';
-        // CURRENCY UPDATE
         price.textContent = `Rs ${item.currentPrice}`;
         infoDiv.appendChild(title);
         infoDiv.appendChild(price);
@@ -524,7 +626,6 @@ function updateGlobalCartUI() {
     
     cartItemsContainer.appendChild(fragment);
     
-    // CURRENCY UPDATE
     document.getElementById('cart-subtotal').textContent = `Rs ${subtotal}`; 
     document.getElementById('cart-total').textContent = `Rs ${subtotal + DELIVERY_FEE}`; 
 }
@@ -569,7 +670,6 @@ async function placeOrder() {
     
     const idempotencyKey = 'ONLINE-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9);
     
-    // --- MODIFIED: INJECTING TARGET TENANT FOR AGGREGATOR CHECKOUT ROUTING ---
     const targetStoreId = cart.length > 0 ? cart[0].storeId : null;
 
     try { 
@@ -671,7 +771,6 @@ async function checkOrderStatus() {
             
             const totalDiv = document.createElement('div');
             totalDiv.style.cssText = 'margin-top:24px; font-size:14px; font-weight:700;';
-            // CURRENCY UPDATE
             totalDiv.textContent = `To Pay: Rs ${order.totalAmount} (COD)`;
             
             card.appendChild(h3);
@@ -788,7 +887,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('nav-orders').addEventListener('click', () => switchView('orders'));
     document.getElementById('nav-cats').addEventListener('click', () => window.scrollTo({top: 0, behavior: 'smooth'}));
 
-    // --- MODIFIED: GPS INTERCEPTOR REPLACES STATIC LOAD ---
+    // BIND NEW AUTH LOGIC TO UI
+    document.querySelector('.profile-icon').addEventListener('click', openCustomerLogin);
+    updateAuthUI();
+
     fetchCategories(); 
     initializeLocationAndFetch();
 });
