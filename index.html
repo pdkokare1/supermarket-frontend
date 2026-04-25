@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://dailypick-backend-production-05d6.up.railway.app https://apis.google.com https://www.googleapis.com; img-src 'self' data: https://res.cloudinary.com; script-src 'self' https://www.gstatic.com 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; frame-src https://www.google.com https://recaptcha.net;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://dailypick-backend-production-05d6.up.railway.app https://apis.google.com https://www.googleapis.com https://lumberjack.razorpay.com https://api.razorpay.com; img-src 'self' data: https://res.cloudinary.com; script-src 'self' https://www.gstatic.com https://checkout.razorpay.com 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; frame-src https://www.google.com https://recaptcha.net https://api.razorpay.com;">
     
-    <title>DailyPick | Quick Market</title>
+    <title>The Gamut | Quick Market</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,6 +13,8 @@
     <link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -20,7 +22,7 @@
         <div class="top-bar">
             <div class="delivery-info">
                 <div class="delivery-time-container">
-                    <h2>DailyPick</h2>
+                    <h2>The Gamut</h2>
                     <h1 class="delivery-time">18 minutes</h1>
                 </div>
                 <p class="delivery-location">Locating... ▼</p> 
@@ -135,6 +137,12 @@
         </div>
 
         <div class="delivery-section">
+            <h3 class="delivery-title" style="margin-bottom: 12px;">Payment Method</h3>
+            <div class="delivery-tabs" style="margin-bottom: 24px;">
+                <button id="tab-pay-cod" class="del-tab active" onclick="setPaymentMethod('Cash')" aria-label="Cash on Delivery">💵 Pay on Delivery</button>
+                <button id="tab-pay-online" class="del-tab" onclick="setPaymentMethod('Online')" aria-label="Pay Online">💳 Pay Online</button>
+            </div>
+
             <h3 class="delivery-title">Delivery Details</h3>
             <input type="text" id="cust-name" class="delivery-input" placeholder="Your Name" required aria-label="Your Name">
             <input type="tel" id="cust-phone" class="delivery-input" placeholder="Phone Number" required aria-label="Phone Number">
