@@ -5,6 +5,7 @@ const DELIVERY_FEE = 20;
 let allProducts = []; 
 let cart = []; 
 let selectedDeliveryType = 'Instant'; 
+let selectedPaymentMethod = 'Cash'; // NEW: Default to COD
 let allCategories = [];
 let trackingStreamController = null; 
 let isProcessingOrder = false; 
@@ -42,9 +43,8 @@ const CATEGORY_IMAGES = {
     'Grocery & Kitchen': { emoji: '🌾', color: '#fef3c7' }
 };
 
-// --- NEW: FIREBASE AUTHENTICATION CONFIGURATION ---
+// --- EXISTING: FIREBASE AUTHENTICATION CONFIGURATION ---
 const firebaseConfig = {
-    // REPLACEME: Inject your Firebase Web Credentials here before Vercel deploy
     apiKey: "YOUR_FIREBASE_API_KEY",
     authDomain: "your-project.firebaseapp.com",
     projectId: "your-project"
@@ -65,9 +65,7 @@ function openCustomerLogin() {
         if (!window.recaptchaVerifier) {
             window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
                 'size': 'normal',
-                'callback': (response) => {
-                    // reCAPTCHA solved, allow signInWithPhoneNumber.
-                }
+                'callback': (response) => { }
             });
             window.recaptchaVerifier.render();
         }
@@ -147,9 +145,9 @@ function updateAuthUI() {
     const token = localStorage.getItem('dailyPick_customerToken');
     const profileIcon = document.querySelector('.profile-icon');
     if (token) {
-        profileIcon.textContent = '🟢'; // Logged in indicator
+        profileIcon.textContent = '🟢'; 
     } else {
-        profileIcon.textContent = '👤'; // Logged out indicator
+        profileIcon.textContent = '👤'; 
     }
 }
 
@@ -300,10 +298,8 @@ function renderProducts(productsToRender) {
             ? product.variants[0] 
             : { price: 0, weightOrVolume: 'N/A', stock: 0, lowStockThreshold: 5 };
 
-        // Main info block
         const infoBlock = document.createElement('div');
         
-        // Image Container
         const imgContainer = document.createElement('div');
         imgContainer.className = 'product-image';
         imgContainer.style.cssText = 'padding:0; overflow:hidden; position:relative;';
@@ -330,7 +326,6 @@ function renderProducts(productsToRender) {
             imgContainer.appendChild(placeholder);
         }
 
-        // Text Info
         const textInfo = document.createElement('div');
         textInfo.className = 'product-info';
         
@@ -355,7 +350,6 @@ function renderProducts(productsToRender) {
         infoBlock.appendChild(imgContainer);
         infoBlock.appendChild(textInfo);
 
-        // Price Row
         const priceRow = document.createElement('div');
         priceRow.className = 'price-action-row';
         
@@ -647,6 +641,13 @@ function setDeliveryType(type) {
     document.getElementById('routine-options').classList.toggle('hidden', type === 'Instant'); 
 }
 
+// --- NEW: Toggle Payment Method ---
+window.setPaymentMethod = function(method) {
+    selectedPaymentMethod = method;
+    document.getElementById('tab-pay-cod').classList.toggle('active', method === 'Cash');
+    document.getElementById('tab-pay-online').classList.toggle('active', method === 'Online');
+};
+
 async function placeOrder() { 
     if (cart.length === 0 || isProcessingOrder) return; 
     
@@ -669,52 +670,97 @@ async function placeOrder() {
     const scheduleTime = selectedDeliveryType === 'Routine' ? document.getElementById('schedule-time').value : 'ASAP'; 
     
     const idempotencyKey = 'ONLINE-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9);
-    
     const targetStoreId = cart.length > 0 ? cart[0].storeId : null;
 
-    try { 
-        const res = await storeFetchWithAuth(`${BACKEND_URL}/api/orders`, { 
-            method: 'POST', 
-            headers: { 
-                'Content-Type': 'application/json',
-                'Idempotency-Key': idempotencyKey 
-            }, 
-            body: JSON.stringify({
-                customerName: name, 
-                customerPhone: phone, 
-                deliveryAddress: address, 
-                items: cart, 
-                totalAmount: finalTotal, 
-                deliveryType: selectedDeliveryType, 
-                scheduleTime: scheduleTime,
-                storeId: targetStoreId 
-            }) 
-        }); 
-        
-        const result = await res.json(); 
-        
-        if (result.success) { 
-            localStorage.setItem('dailyPick_activeOrderId', result.orderId); 
-            cart = []; 
-            document.getElementById('cust-name').value = ''; 
-            document.getElementById('cust-phone').value = ''; 
-            document.getElementById('cust-address').value = ''; 
-            setDeliveryType('Instant'); 
-            renderProducts(allProducts); 
-            updateGlobalCartUI(); 
-            closeCart(); 
-            switchView('orders'); 
-            showToast('Order Received! 🚀'); 
-        } else { 
-            showToast('Failed to place order.'); 
+    // Inner function to finalize the POST request after checking payment methodology
+    const finalizeBackendOrder = async (transactionId = null) => {
+        try { 
+            const res = await storeFetchWithAuth(`${BACKEND_URL}/api/orders`, { 
+                method: 'POST', 
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Idempotency-Key': idempotencyKey 
+                }, 
+                body: JSON.stringify({
+                    customerName: name, 
+                    customerPhone: phone, 
+                    deliveryAddress: address, 
+                    items: cart, 
+                    totalAmount: finalTotal, 
+                    deliveryType: selectedDeliveryType, 
+                    scheduleTime: scheduleTime,
+                    storeId: targetStoreId,
+                    paymentMethod: selectedPaymentMethod,
+                    transactionId: transactionId
+                }) 
+            }); 
+            
+            const result = await res.json(); 
+            
+            if (result.success) { 
+                localStorage.setItem('dailyPick_activeOrderId', result.orderId || result.data?._id); 
+                cart = []; 
+                document.getElementById('cust-name').value = ''; 
+                document.getElementById('cust-phone').value = ''; 
+                document.getElementById('cust-address').value = ''; 
+                setDeliveryType('Instant');
+                window.setPaymentMethod('Cash'); 
+                renderProducts(allProducts); 
+                updateGlobalCartUI(); 
+                closeCart(); 
+                switchView('orders'); 
+                showToast('Order Received! 🚀'); 
+            } else { 
+                showToast('Failed to place order.'); 
+            } 
+        } catch(e) { 
+            showToast('Network error.'); 
+        } finally { 
+            checkoutBtn.textContent = 'Place Order'; 
+            checkoutBtn.disabled = false; 
+            isProcessingOrder = false; 
         } 
-    } catch(e) { 
-        showToast('Network error.'); 
-    } finally { 
-        checkoutBtn.textContent = 'Place Order'; 
-        checkoutBtn.disabled = false; 
-        isProcessingOrder = false; 
-    } 
+    };
+
+    // --- NEW: Trigger Razorpay UI before sending to backend ---
+    if (selectedPaymentMethod === 'Online') {
+        if (typeof Razorpay === 'undefined') {
+            showToast("Payment gateway loading, please try again.");
+            checkoutBtn.textContent = 'Place Order'; 
+            checkoutBtn.disabled = false; 
+            isProcessingOrder = false; 
+            return;
+        }
+        
+        var options = {
+            "key": "rzp_test_dummykey", // Safe fallback key for sandbox UI rendering
+            "amount": finalTotal * 100, // Paise
+            "currency": "INR",
+            "name": "The Gamut",
+            "description": "Store Checkout",
+            "handler": async function (response) {
+                await finalizeBackendOrder(response.razorpay_payment_id);
+            },
+            "prefill": {
+                "name": name,
+                "contact": phone
+            },
+            "theme": {
+                "color": "#16A34A" 
+            }
+        };
+        var rzp1 = new Razorpay(options);
+        rzp1.on('payment.failed', function (response){
+            showToast('Payment Cancelled/Failed');
+            checkoutBtn.textContent = 'Place Order'; 
+            checkoutBtn.disabled = false;
+            isProcessingOrder = false;
+        });
+        rzp1.open();
+    } else {
+        // Fallback to COD logic
+        await finalizeBackendOrder();
+    }
 }
 
 async function checkOrderStatus() { 
@@ -771,13 +817,25 @@ async function checkOrderStatus() {
             
             const totalDiv = document.createElement('div');
             totalDiv.style.cssText = 'margin-top:24px; font-size:14px; font-weight:700;';
-            totalDiv.textContent = `To Pay: Rs ${order.totalAmount} (COD)`;
+            totalDiv.textContent = order.paymentMethod === 'Online' ? `Paid: Rs ${order.totalAmount} (Online)` : `To Pay: Rs ${order.totalAmount} (COD)`;
             
             card.appendChild(h3);
             card.appendChild(pTime);
             card.appendChild(statusBadge);
             card.appendChild(schedBadge);
             card.appendChild(totalDiv);
+
+            // --- NEW: Render Shadowfax live tracking link if provided by backend ---
+            if (order.trackingLink) {
+                const trackingBtn = document.createElement('a');
+                trackingBtn.href = order.trackingLink;
+                trackingBtn.target = '_blank';
+                trackingBtn.className = 'primary-btn';
+                trackingBtn.style.cssText = 'display:block; margin-top:16px; background:#8b5cf6; text-align:center; text-decoration:none; padding:12px; border-radius:8px; font-size:13px; color:white;';
+                trackingBtn.innerHTML = `🛵 Track Rider: ${order.deliveryDriverName || 'Live Tracker'}`;
+                card.appendChild(trackingBtn);
+            }
+
             trackingContent.appendChild(card);
             
             if (order.status !== 'Dispatched' && !trackingStreamController) {
