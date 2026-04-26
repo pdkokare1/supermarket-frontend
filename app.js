@@ -2,6 +2,10 @@
 const BACKEND_URL = 'https://dailypick-backend-production-05d6.up.railway.app';
 const DELIVERY_FEE = 20;
 
+// --- MULTI-TENANT CONFIGURATION ---
+// Set to FALSE to bypass the legacy single-store restriction and enable the Gamut Hybrid Cart
+const ENABLE_CART_ISOLATION = false; 
+
 let allProducts = []; 
 let cart = []; 
 let selectedDeliveryType = 'Instant'; 
@@ -447,7 +451,10 @@ function quickAdd(productId) {
 
     const displayVariant = (p.variants && p.variants.length > 0) ? p.variants[0] : { price: 0, weightOrVolume: 'N/A', storeId: null }; 
 
-    if (cart.length > 0 && displayVariant.storeId && cart[0].storeId && cart[0].storeId !== displayVariant.storeId) {
+    // --- MODIFIED: OMNICHANNEL HYBRID CART GUARD ---
+    // The strict cart isolation check is now controlled by the ENABLE_CART_ISOLATION toggle.
+    // By default, this is turned off so users can add products from any store into a single global cart.
+    if (ENABLE_CART_ISOLATION && cart.length > 0 && displayVariant.storeId && cart[0].storeId && cart[0].storeId !== displayVariant.storeId) {
         pendingProductToAdd = { ...p, targetVariant: displayVariant };
         document.getElementById('isolation-modal').classList.remove('hidden');
         return; 
@@ -620,8 +627,13 @@ function updateGlobalCartUI() {
     
     cartItemsContainer.appendChild(fragment);
     
+    // --- MODIFIED: Dynamic Omnichannel Delivery Fee UI ---
+    // If user orders from 2 distinct stores, 2 delivery riders/trucks are needed, multiplying the base fee.
+    const uniqueStoreIds = new Set(cart.map(i => i.storeId || 'default')).size;
+    const dynamicDeliveryTotal = uniqueStoreIds === 0 ? 0 : (DELIVERY_FEE * uniqueStoreIds);
+
     document.getElementById('cart-subtotal').textContent = `Rs ${subtotal}`; 
-    document.getElementById('cart-total').textContent = `Rs ${subtotal + DELIVERY_FEE}`; 
+    document.getElementById('cart-total').textContent = `Rs ${subtotal + dynamicDeliveryTotal}`; 
 }
 
 function openCart() { 
@@ -665,40 +677,71 @@ async function placeOrder() {
     checkoutBtn.textContent = 'Processing...'; 
     checkoutBtn.disabled = true; 
     
-    const subtotal = cart.reduce((s, i) => s + (i.currentPrice * i.qty), 0); 
-    const finalTotal = subtotal + DELIVERY_FEE; 
+    // --- MODIFIED: HYBRID CART MATRIX (OMNICHANNEL SPLITTER) ---
+    
+    // 1. Group all cart items by their specific Store ID
+    const groupedCart = {};
+    cart.forEach(item => {
+        const sId = item.storeId || 'default';
+        if (!groupedCart[sId]) groupedCart[sId] = { items: [], subtotal: 0 };
+        groupedCart[sId].items.push(item);
+        groupedCart[sId].subtotal += (item.currentPrice * item.qty);
+    });
+
+    const storeIds = Object.keys(groupedCart);
+    const totalDeliveryFee = DELIVERY_FEE * storeIds.length; 
+    const grandSubtotal = cart.reduce((s, i) => s + (i.currentPrice * i.qty), 0); 
+    const finalTotal = grandSubtotal + totalDeliveryFee; 
     const scheduleTime = selectedDeliveryType === 'Routine' ? document.getElementById('schedule-time').value : 'ASAP'; 
     
-    const idempotencyKey = 'ONLINE-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9);
-    const targetStoreId = cart.length > 0 ? cart[0].storeId : null;
+    // Generate a unique tracking group ID if we need to link these sub-orders together
+    const splitShipmentGroupId = 'GRP-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
 
-    // Inner function to finalize the POST request after checking payment methodology
+    // Inner function to finalize the concurrent POST requests after checking payment methodology
     const finalizeBackendOrder = async (transactionId = null) => {
         try { 
-            const res = await storeFetchWithAuth(`${BACKEND_URL}/api/orders`, { 
-                method: 'POST', 
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Idempotency-Key': idempotencyKey 
-                }, 
-                body: JSON.stringify({
-                    customerName: name, 
-                    customerPhone: phone, 
-                    deliveryAddress: address, 
-                    items: cart, 
-                    totalAmount: finalTotal, 
-                    deliveryType: selectedDeliveryType, 
-                    scheduleTime: scheduleTime,
-                    storeId: targetStoreId,
-                    paymentMethod: selectedPaymentMethod,
-                    transactionId: transactionId
-                }) 
-            }); 
+            let primaryDisplayOrderId = null;
+
+            // 2. Map the groups into concurrent API requests so they are handled simultaneously 
+            const orderPromises = storeIds.map(async (sId) => {
+                const group = groupedCart[sId];
+                const groupFinalTotal = group.subtotal + DELIVERY_FEE;
+                const idempotencyKey = 'ONLINE-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9);
+
+                const res = await storeFetchWithAuth(`${BACKEND_URL}/api/orders`, { 
+                    method: 'POST', 
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Idempotency-Key': idempotencyKey 
+                    }, 
+                    body: JSON.stringify({
+                        customerName: name, 
+                        customerPhone: phone, 
+                        deliveryAddress: address, 
+                        items: group.items, 
+                        totalAmount: groupFinalTotal, 
+                        deliveryType: selectedDeliveryType, 
+                        scheduleTime: scheduleTime,
+                        storeId: sId === 'default' ? null : sId,
+                        paymentMethod: selectedPaymentMethod,
+                        transactionId: transactionId,
+                        splitShipmentGroupId: splitShipmentGroupId 
+                    }) 
+                }); 
+                
+                const result = await res.json();
+                // Store the very first sub-order ID to show in the immediate UI tracking view
+                if (result.success && !primaryDisplayOrderId) {
+                    primaryDisplayOrderId = result.orderId || result.data?._id;
+                }
+                return result;
+            });
+
+            // 3. Await all separate enterprise/platform webhooks and dispatches
+            await Promise.all(orderPromises);
             
-            const result = await res.json(); 
-            
-            if (result.success) { 
-                localStorage.setItem('dailyPick_activeOrderId', result.orderId || result.data?._id); 
+            if (primaryDisplayOrderId) {
+                localStorage.setItem('dailyPick_activeOrderId', primaryDisplayOrderId); 
                 cart = []; 
                 document.getElementById('cust-name').value = ''; 
                 document.getElementById('cust-phone').value = ''; 
@@ -709,10 +752,10 @@ async function placeOrder() {
                 updateGlobalCartUI(); 
                 closeCart(); 
                 switchView('orders'); 
-                showToast('Order Received! 🚀'); 
-            } else { 
+                showToast(`Order Received! Split into ${storeIds.length} shipments. 🚀`); 
+            } else {
                 showToast('Failed to place order.'); 
-            } 
+            }
         } catch(e) { 
             showToast('Network error.'); 
         } finally { 
@@ -722,7 +765,7 @@ async function placeOrder() {
         } 
     };
 
-    // --- NEW: Trigger Razorpay UI before sending to backend ---
+    // --- EXISTING: Trigger Razorpay UI before sending to backend ---
     if (selectedPaymentMethod === 'Online') {
         if (typeof Razorpay === 'undefined') {
             showToast("Payment gateway loading, please try again.");
@@ -737,7 +780,7 @@ async function placeOrder() {
             "amount": finalTotal * 100, // Paise
             "currency": "INR",
             "name": "The Gamut",
-            "description": "Store Checkout",
+            "description": `Hybrid Store Checkout (${storeIds.length} Shipments)`,
             "handler": async function (response) {
                 await finalizeBackendOrder(response.razorpay_payment_id);
             },
