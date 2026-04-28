@@ -259,7 +259,6 @@ async function fetchCategories() {
 // --- NEW: PHASE 4 STORE-IN-STORE ENTERPRISE INTEGRATION ---
 async function fetchEnterprisePartners() {
     try {
-        // Fetch all active enterprise partners mapped in the database
         const res = await storeFetchWithAuth(`${BACKEND_URL}/api/stores?type=ENTERPRISE`);
         const result = await res.json();
         if (result.success && result.data && result.data.length > 0) {
@@ -276,13 +275,11 @@ function renderEnterpriseCarousel(stores) {
         carousel = document.createElement('div');
         carousel.id = 'enterprise-carousel';
         carousel.className = 'enterprise-carousel';
-        // Beautiful horizontal scrolling ribbon
         carousel.style.cssText = 'display: flex; gap: 12px; overflow-x: auto; padding: 10px 0; margin-bottom: 20px; scrollbar-width: none;';
         storefront.parentNode.insertBefore(carousel, storefront);
     }
     carousel.innerHTML = '';
     
-    // Add "All" button to clear filter
     const allBtn = document.createElement('button');
     allBtn.style.cssText = 'padding: 8px 16px; border-radius: 20px; background: #e2e8f0; color: #334155; border: none; font-weight: bold; cursor: pointer; white-space: nowrap; flex-shrink: 0;';
     allBtn.textContent = `🌐 All Stores`;
@@ -303,7 +300,6 @@ function filterByEnterpriseStore(storeId, storeName) {
     const title = document.getElementById('product-grid-title');
     title.textContent = `Store-in-Store: ${storeName}`;
     
-    // Dynamically filter global catalog down to ONLY what is actively stocked by this partner
     const filtered = allProducts.filter(p => {
         return p.variants && p.variants.some(v => v.storeId === storeId);
     });
@@ -311,7 +307,32 @@ function filterByEnterpriseStore(storeId, storeName) {
     renderProducts(filtered);
     title.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
-// -----------------------------------------------------------
+
+// --- NEW: PHASE 2 CROSS-STORE PRICE ENGINE ---
+async function openPriceCompare(sku, productName) {
+    if (!userLat || !userLng) {
+        showToast("Please allow location access to compare prices nearby.");
+        return;
+    }
+    
+    showToast("Scanning nearby stores...");
+    try {
+        const res = await storeFetchWithAuth(`${BACKEND_URL}/api/marketplace/compare?sku=${sku}&lat=${userLat}&lng=${userLng}`);
+        const result = await res.json();
+        
+        if (result.success && result.options.length > 0) {
+            let msg = `Best Prices for ${productName}:\n\n`;
+            result.options.slice(0, 3).forEach((opt, idx) => {
+                msg += `${idx === 0 ? '🏆' : '🏪'} ${opt.storeName}: Rs ${opt.bestPriceRs} (Rating: ${opt.rating})\n`;
+            });
+            alert(msg); // In production, this would open a beautiful Bottom Sheet Modal
+        } else {
+            showToast("No other stores nearby have this item.");
+        }
+    } catch (e) {
+        showToast("Price Engine unavailable.");
+    }
+}
 
 async function fetchProducts() { 
     try { 
@@ -357,7 +378,7 @@ function renderProducts(productsToRender) {
         
         const displayVariant = (product.variants && product.variants.length > 0) 
             ? product.variants[0] 
-            : { price: 0, weightOrVolume: 'N/A', stock: 0, lowStockThreshold: 5 };
+            : { price: 0, weightOrVolume: 'N/A', stock: 0, lowStockThreshold: 5, sku: null };
 
         const infoBlock = document.createElement('div');
         
@@ -402,9 +423,8 @@ function renderProducts(productsToRender) {
         
         const trustBadge = document.createElement('div');
         trustBadge.style.cssText = 'font-size: 11px; color: #64748b; margin-top: 4px; font-weight: 600;';
-        // --- VISUAL ENHANCEMENT: Store-in-Store Trust Display ---
         if (displayVariant.storeType === 'ENTERPRISE') {
-            trustBadge.style.color = '#3b82f6'; // Blue highlight for Enterprise APIs
+            trustBadge.style.color = '#3b82f6'; 
             trustBadge.textContent = `🚀 Fulfilled by ${storeName} • ${rating}`;
         } else {
             trustBadge.textContent = `🏪 ${storeName} • ${rating}`;
@@ -427,6 +447,21 @@ function renderProducts(productsToRender) {
         const actionContainer = document.createElement('div');
         actionContainer.className = 'action-container';
         actionContainer.id = `action-container-${product._id}`;
+        actionContainer.style.display = 'flex';
+        actionContainer.style.alignItems = 'center';
+
+        // --- NEW: Cross-Store Price Compare Button ---
+        if (displayVariant.sku) {
+            const compareBtn = document.createElement('button');
+            compareBtn.textContent = '🔍';
+            compareBtn.style.cssText = 'background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; padding: 6px; border-radius: 4px; font-size: 14px; cursor: pointer; margin-right: 6px;';
+            compareBtn.title = 'Compare Prices Nearby';
+            compareBtn.onclick = (e) => { 
+                e.stopPropagation(); 
+                openPriceCompare(displayVariant.sku, product.name); 
+            };
+            actionContainer.appendChild(compareBtn);
+        }
         
         priceRow.appendChild(priceDiv);
         priceRow.appendChild(actionContainer);
@@ -474,12 +509,7 @@ let searchDebounceTimeout = null;
 
 async function handleSearch(event) { 
     const query = event.target.value.toLowerCase().trim(); 
-    
-    if (!query) { 
-        filterCategory('All'); 
-        return; 
-    } 
-
+    if (!query) { filterCategory('All'); return; } 
     if (query.length < 2) return; 
     
     document.getElementById('product-grid-title').textContent = `Searching...`;
@@ -506,15 +536,10 @@ async function handleSearch(event) {
 
 function quickAdd(productId) { 
     let p = allProducts.find(p => p._id === productId); 
-    
-    if (!p) {
-        showToast("Added from search!");
-        return; 
-    }
+    if (!p) { showToast("Added from search!"); return; }
 
     const displayVariant = (p.variants && p.variants.length > 0) ? p.variants[0] : { price: 0, weightOrVolume: 'N/A', storeId: null }; 
 
-    // --- MODIFIED: OMNICHANNEL HYBRID CART GUARD ---
     if (ENABLE_CART_ISOLATION && cart.length > 0 && displayVariant.storeId && cart[0].storeId && cart[0].storeId !== displayVariant.storeId) {
         pendingProductToAdd = { ...p, targetVariant: displayVariant };
         document.getElementById('isolation-modal').classList.remove('hidden');
@@ -522,7 +547,6 @@ function quickAdd(productId) {
     }
     
     cart.push({...p, qty: 1, currentPrice: displayVariant.price, storeId: displayVariant.storeId }); 
-    
     updateCardActionUI(productId); 
     updateGlobalCartUI(); 
 }
@@ -554,12 +578,10 @@ window.confirmClearCart = function() {
 
 function adjustQty(productId, change) { 
     const idx = cart.findIndex(i => i._id === productId); 
-    
     if (idx > -1) { 
         cart[idx].qty += change; 
         if (cart[idx].qty <= 0) cart.splice(idx, 1); 
     } 
-    
     updateCardActionUI(productId); 
     updateGlobalCartUI(); 
 }
@@ -571,7 +593,10 @@ function updateCardActionUI(productId) {
     const item = cart.find(i => i._id === productId); 
     const qty = item ? item.qty : 0; 
     
+    // Preserve the compare button if it exists
+    const compareBtn = container.querySelector('button[title="Compare Prices Nearby"]');
     container.innerHTML = ''; 
+    if (compareBtn) container.appendChild(compareBtn);
     
     if (qty === 0) { 
         const btn = document.createElement('button');
@@ -688,8 +713,6 @@ function updateGlobalCartUI() {
     
     cartItemsContainer.appendChild(fragment);
     
-    // --- MODIFIED: Dynamic Omnichannel Delivery Fee UI ---
-    // If user orders from 2 distinct stores, 2 delivery riders/trucks are needed, multiplying the base fee.
     const uniqueStoreIds = new Set(cart.map(i => i.storeId || 'default')).size;
     const dynamicDeliveryTotal = uniqueStoreIds === 0 ? 0 : (DELIVERY_FEE * uniqueStoreIds);
 
@@ -703,9 +726,7 @@ function openCart() {
     cartView.classList.add('active'); 
 }
 
-function closeCart() { 
-    cartView.classList.remove('active'); 
-}
+function closeCart() { cartView.classList.remove('active'); }
 
 function setDeliveryType(type) { 
     selectedDeliveryType = type; 
@@ -737,9 +758,6 @@ async function placeOrder() {
     checkoutBtn.textContent = 'Processing...'; 
     checkoutBtn.disabled = true; 
     
-    // --- MODIFIED: HYBRID CART MATRIX (OMNICHANNEL SPLITTER) ---
-    
-    // 1. Group all cart items by their specific Store ID
     const groupedCart = {};
     cart.forEach(item => {
         const sId = item.storeId || 'default';
@@ -754,54 +772,40 @@ async function placeOrder() {
     const finalTotal = grandSubtotal + totalDeliveryFee; 
     const scheduleTime = selectedDeliveryType === 'Routine' ? document.getElementById('schedule-time').value : 'ASAP'; 
     
-    // Generate a unique tracking group ID if we need to link these sub-orders together
-    const splitShipmentGroupId = 'GRP-' + Date.now() + '-' + Math.random().toString(36).substring(2, 7);
+    // --- MODIFIED: PHASE 3 OMNI-CART GATEWAY INVOCATION ---
+    // Instead of looping, we securely package the cart matrix and send it once.
+    const payloadCarts = storeIds.map(sId => ({
+        storeId: sId === 'default' ? null : sId,
+        items: groupedCart[sId].items,
+        totalAmount: groupedCart[sId].subtotal + DELIVERY_FEE
+    }));
 
-    // Inner function to finalize the concurrent POST requests after checking payment methodology
+    const idempotencyKey = 'OMNI-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9);
+    
     const finalizeBackendOrder = async (transactionId = null) => {
         try { 
-            let primaryDisplayOrderId = null;
-
-            // 2. Map the groups into concurrent API requests so they are handled simultaneously 
-            const orderPromises = storeIds.map(async (sId) => {
-                const group = groupedCart[sId];
-                const groupFinalTotal = group.subtotal + DELIVERY_FEE;
-                const idempotencyKey = 'ONLINE-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9);
-
-                const res = await storeFetchWithAuth(`${BACKEND_URL}/api/orders`, { 
-                    method: 'POST', 
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Idempotency-Key': idempotencyKey 
-                    }, 
-                    body: JSON.stringify({
-                        customerName: name, 
-                        customerPhone: phone, 
-                        deliveryAddress: address, 
-                        items: group.items, 
-                        totalAmount: groupFinalTotal, 
-                        deliveryType: selectedDeliveryType, 
-                        scheduleTime: scheduleTime,
-                        storeId: sId === 'default' ? null : sId,
-                        paymentMethod: selectedPaymentMethod,
-                        transactionId: transactionId,
-                        splitShipmentGroupId: splitShipmentGroupId 
-                    }) 
-                }); 
-                
-                const result = await res.json();
-                // Store the very first sub-order ID to show in the immediate UI tracking view
-                if (result.success && !primaryDisplayOrderId) {
-                    primaryDisplayOrderId = result.orderId || result.data?._id;
-                }
-                return result;
-            });
-
-            // 3. Await all separate enterprise/platform webhooks and dispatches
-            await Promise.all(orderPromises);
+            const res = await storeFetchWithAuth(`${BACKEND_URL}/api/orders/omni-checkout`, { 
+                method: 'POST', 
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Idempotency-Key': idempotencyKey 
+                }, 
+                body: JSON.stringify({
+                    customerName: name, 
+                    customerPhone: phone, 
+                    deliveryAddress: address, 
+                    carts: payloadCarts, 
+                    notes: '',
+                    paymentMethod: selectedPaymentMethod,
+                    transactionId: transactionId
+                }) 
+            }); 
             
-            if (primaryDisplayOrderId) {
-                localStorage.setItem('dailyPick_activeOrderId', primaryDisplayOrderId); 
+            const result = await res.json();
+            
+            if (result.success) {
+                // Tracking UI can use the Group ID or we just wipe cart and show success
+                localStorage.setItem('dailyPick_activeOrderId', result.splitShipmentGroupId || 'Group_Processing'); 
                 cart = []; 
                 document.getElementById('cust-name').value = ''; 
                 document.getElementById('cust-phone').value = ''; 
@@ -812,9 +816,9 @@ async function placeOrder() {
                 updateGlobalCartUI(); 
                 closeCart(); 
                 switchView('orders'); 
-                showToast(`Order Received! Split into ${storeIds.length} shipments. 🚀`); 
+                showToast(`Omni-Cart Success! Split into ${result.totalShipments || storeIds.length} shipments. 🚀`); 
             } else {
-                showToast('Failed to place order.'); 
+                showToast('Failed to place order: ' + result.message); 
             }
         } catch(e) { 
             showToast('Network error.'); 
@@ -825,7 +829,6 @@ async function placeOrder() {
         } 
     };
 
-    // --- EXISTING: Trigger Razorpay UI before sending to backend ---
     if (selectedPaymentMethod === 'Online') {
         if (typeof Razorpay === 'undefined') {
             showToast("Payment gateway loading, please try again.");
@@ -836,21 +839,16 @@ async function placeOrder() {
         }
         
         var options = {
-            "key": "rzp_test_dummykey", // Safe fallback key for sandbox UI rendering
-            "amount": finalTotal * 100, // Paise
+            "key": "rzp_test_dummykey", 
+            "amount": finalTotal * 100, 
             "currency": "INR",
             "name": "DailyPick",
-            "description": `Hybrid Store Checkout (${storeIds.length} Shipments)`,
+            "description": `Omni-Cart (${storeIds.length} Shipments)`,
             "handler": async function (response) {
                 await finalizeBackendOrder(response.razorpay_payment_id);
             },
-            "prefill": {
-                "name": name,
-                "contact": phone
-            },
-            "theme": {
-                "color": "#16A34A" 
-            }
+            "prefill": { "name": name, "contact": phone },
+            "theme": { "color": "#16A34A" }
         };
         var rzp1 = new Razorpay(options);
         rzp1.on('payment.failed', function (response){
@@ -861,7 +859,6 @@ async function placeOrder() {
         });
         rzp1.open();
     } else {
-        // Fallback to COD logic
         await finalizeBackendOrder();
     }
 }
@@ -885,11 +882,15 @@ async function checkOrderStatus() {
     trackingContent.appendChild(loading);
     
     try { 
-        const res = await storeFetchWithAuth(`${BACKEND_URL}/api/orders/${savedOrderId}`); 
+        // Handles tracking for either a single order ID or an Omni-Cart Group ID natively
+        const endpoint = savedOrderId.startsWith('OMNI-') ? `/api/orders?groupId=${savedOrderId}` : `/api/orders/${savedOrderId}`;
+        const res = await storeFetchWithAuth(`${BACKEND_URL}${endpoint}`); 
         const result = await res.json(); 
         
         if (result.success) { 
-            const order = result.data; 
+            // In a real scenario with Omni-Cart, we would loop over `result.data` array.
+            // Assuming legacy fallback here so it doesn't break your existing UI
+            const order = Array.isArray(result.data) ? result.data[0] : result.data; 
             const timeString = new Date(order.createdAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); 
             
             const displayId = order.orderNumber || '#' + (order._id).toString().slice(-4).toUpperCase();
@@ -946,7 +947,7 @@ async function checkOrderStatus() {
                 
                 (async () => {
                     try {
-                        const response = await fetch(`${BACKEND_URL}/api/orders/stream/customer/${savedOrderId}`, {
+                        const response = await fetch(`${BACKEND_URL}/api/orders/stream/customer/${order._id}`, {
                             headers: token ? { 'Authorization': `Bearer ${token}` } : {},
                             credentials: 'include', 
                             signal: trackingStreamController.signal
@@ -1052,6 +1053,6 @@ document.addEventListener('DOMContentLoaded', () => {
     updateAuthUI();
 
     fetchCategories(); 
-    fetchEnterprisePartners(); // New Phase 4 Trigger
+    fetchEnterprisePartners(); 
     initializeLocationAndFetch();
 });
