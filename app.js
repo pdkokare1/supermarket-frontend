@@ -3,7 +3,7 @@ const BACKEND_URL = 'https://dailypick-backend-production-05d6.up.railway.app';
 const DELIVERY_FEE = 20;
 
 // --- MULTI-TENANT CONFIGURATION ---
-// Set to FALSE to bypass the legacy single-store restriction and enable the Gamut Hybrid Cart
+// Set to FALSE to bypass the legacy single-store restriction and enable the DailyPick Hybrid Cart
 const ENABLE_CART_ISOLATION = false; 
 
 let allProducts = []; 
@@ -839,7 +839,7 @@ async function placeOrder() {
             "key": "rzp_test_dummykey", // Safe fallback key for sandbox UI rendering
             "amount": finalTotal * 100, // Paise
             "currency": "INR",
-            "name": "The Gamut",
+            "name": "DailyPick",
             "description": `Hybrid Store Checkout (${storeIds.length} Shipments)`,
             "handler": async function (response) {
                 await finalizeBackendOrder(response.razorpay_payment_id);
