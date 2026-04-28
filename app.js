@@ -9,7 +9,7 @@ const ENABLE_CART_ISOLATION = false;
 let allProducts = []; 
 let cart = []; 
 let selectedDeliveryType = 'Instant'; 
-let selectedPaymentMethod = 'Cash'; // NEW: Default to COD
+let selectedPaymentMethod = 'Cash'; 
 let allCategories = [];
 let trackingStreamController = null; 
 let isProcessingOrder = false; 
@@ -546,7 +546,14 @@ function quickAdd(productId) {
         return; 
     }
     
-    cart.push({...p, qty: 1, currentPrice: displayVariant.price, storeId: displayVariant.storeId }); 
+    // NEW: Save storeName natively to render Omni-Cart UI headers
+    cart.push({
+        ...p, 
+        qty: 1, 
+        currentPrice: displayVariant.price, 
+        storeId: displayVariant.storeId,
+        storeName: displayVariant.storeName || 'DailyPick Platform'
+    }); 
     updateCardActionUI(productId); 
     updateGlobalCartUI(); 
 }
@@ -568,7 +575,8 @@ window.confirmClearCart = function() {
             ...pendingProductToAdd, 
             qty: 1, 
             currentPrice: pendingProductToAdd.targetVariant.price, 
-            storeId: pendingProductToAdd.targetVariant.storeId 
+            storeId: pendingProductToAdd.targetVariant.storeId,
+            storeName: pendingProductToAdd.targetVariant.storeName || 'DailyPick Platform'
         }); 
         updateCardActionUI(pendingProductToAdd._id);
         updateGlobalCartUI();
@@ -649,71 +657,92 @@ function updateGlobalCartUI() {
         document.getElementById('cart-total').textContent = 'Rs 0'; 
         return; 
     } 
-    
+
+    // --- NEW: PHASE 3 OMNI-CART VISUAL GROUPING ---
+    const groupedCart = {};
+    cart.forEach(item => {
+        const sId = item.storeId || 'default';
+        const sName = item.storeName || 'DailyPick Platform';
+        if (!groupedCart[sId]) groupedCart[sId] = { storeName: sName, items: [], subtotal: 0 };
+        groupedCart[sId].items.push(item);
+        groupedCart[sId].subtotal += (item.currentPrice * item.qty);
+    });
+
     const fragment = document.createDocumentFragment();
 
-    cart.forEach(item => { 
-        const row = document.createElement('div'); 
-        row.className = 'cart-item-row'; 
+    Object.keys(groupedCart).forEach(storeId => {
+        const group = groupedCart[storeId];
         
-        const imgDiv = document.createElement('div');
-        imgDiv.style.cssText = "display:flex; align-items:center; justify-content:center; width:32px;";
-        const optimizedThumb = optimizeCloudinaryUrl(item.imageUrl, 100);
-        
-        if (item.imageUrl) {
-            const img = document.createElement('img');
-            img.src = optimizedThumb;
-            img.style.cssText = "width:32px; height:32px; border-radius:6px; object-fit:contain;";
-            imgDiv.appendChild(img);
-        } else {
-            const box = document.createElement('div');
-            box.style.fontSize = "24px";
-            box.textContent = "📦";
-            imgDiv.appendChild(box);
-        }
+        // Group Header
+        const headerDiv = document.createElement('div');
+        headerDiv.style.cssText = "background: #f1f5f9; padding: 8px 12px; border-radius: 6px; font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase; margin: 16px 0 8px 0; letter-spacing: 0.5px;";
+        headerDiv.textContent = `📦 Fulfilled by ${group.storeName}`;
+        fragment.appendChild(headerDiv);
 
-        const infoDiv = document.createElement('div');
-        infoDiv.className = 'cart-item-info';
-        const title = document.createElement('div');
-        title.className = 'cart-item-title';
-        title.textContent = item.name;
-        const price = document.createElement('div');
-        price.className = 'cart-item-price';
-        price.textContent = `Rs ${item.currentPrice}`;
-        infoDiv.appendChild(title);
-        infoDiv.appendChild(price);
+        // Group Items
+        group.items.forEach(item => { 
+            const row = document.createElement('div'); 
+            row.className = 'cart-item-row'; 
+            
+            const imgDiv = document.createElement('div');
+            imgDiv.style.cssText = "display:flex; align-items:center; justify-content:center; width:32px;";
+            const optimizedThumb = optimizeCloudinaryUrl(item.imageUrl, 100);
+            
+            if (item.imageUrl) {
+                const img = document.createElement('img');
+                img.src = optimizedThumb;
+                img.style.cssText = "width:32px; height:32px; border-radius:6px; object-fit:contain;";
+                imgDiv.appendChild(img);
+            } else {
+                const box = document.createElement('div');
+                box.style.fontSize = "24px";
+                box.textContent = "📦";
+                imgDiv.appendChild(box);
+            }
 
-        const actionDiv = document.createElement('div');
-        actionDiv.className = 'action-container';
-        actionDiv.style.width = '72px';
-        const stepper = document.createElement('div');
-        stepper.className = 'stepper';
-        
-        const mBtn = document.createElement('button');
-        mBtn.textContent = '−';
-        mBtn.onclick = () => adjustQty(item._id, -1);
-        
-        const qSpan = document.createElement('span');
-        qSpan.textContent = item.qty;
-        
-        const pBtn = document.createElement('button');
-        pBtn.textContent = '+';
-        pBtn.onclick = () => adjustQty(item._id, 1);
-        
-        stepper.appendChild(mBtn);
-        stepper.appendChild(qSpan);
-        stepper.appendChild(pBtn);
-        actionDiv.appendChild(stepper);
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'cart-item-info';
+            const title = document.createElement('div');
+            title.className = 'cart-item-title';
+            title.textContent = item.name;
+            const price = document.createElement('div');
+            price.className = 'cart-item-price';
+            price.textContent = `Rs ${item.currentPrice}`;
+            infoDiv.appendChild(title);
+            infoDiv.appendChild(price);
 
-        row.appendChild(imgDiv);
-        row.appendChild(infoDiv);
-        row.appendChild(actionDiv);
-        fragment.appendChild(row);
-    }); 
+            const actionDiv = document.createElement('div');
+            actionDiv.className = 'action-container';
+            actionDiv.style.width = '72px';
+            const stepper = document.createElement('div');
+            stepper.className = 'stepper';
+            
+            const mBtn = document.createElement('button');
+            mBtn.textContent = '−';
+            mBtn.onclick = () => adjustQty(item._id, -1);
+            
+            const qSpan = document.createElement('span');
+            qSpan.textContent = item.qty;
+            
+            const pBtn = document.createElement('button');
+            pBtn.textContent = '+';
+            pBtn.onclick = () => adjustQty(item._id, 1);
+            
+            stepper.appendChild(mBtn);
+            stepper.appendChild(qSpan);
+            stepper.appendChild(pBtn);
+            actionDiv.appendChild(stepper);
+
+            row.appendChild(imgDiv);
+            row.appendChild(infoDiv);
+            row.appendChild(actionDiv);
+            fragment.appendChild(row);
+        });
+    });
     
     cartItemsContainer.appendChild(fragment);
     
-    const uniqueStoreIds = new Set(cart.map(i => i.storeId || 'default')).size;
+    const uniqueStoreIds = Object.keys(groupedCart).length;
     const dynamicDeliveryTotal = uniqueStoreIds === 0 ? 0 : (DELIVERY_FEE * uniqueStoreIds);
 
     document.getElementById('cart-subtotal').textContent = `Rs ${subtotal}`; 
@@ -777,7 +806,8 @@ async function placeOrder() {
     const payloadCarts = storeIds.map(sId => ({
         storeId: sId === 'default' ? null : sId,
         items: groupedCart[sId].items,
-        totalAmount: groupedCart[sId].subtotal + DELIVERY_FEE
+        totalAmount: groupedCart[sId].subtotal + DELIVERY_FEE,
+        deliveryType: selectedDeliveryType // Passing frontend selection to Omni-Cart handler
     }));
 
     const idempotencyKey = 'OMNI-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9);
