@@ -256,6 +256,63 @@ async function fetchCategories() {
     }
 }
 
+// --- NEW: PHASE 4 STORE-IN-STORE ENTERPRISE INTEGRATION ---
+async function fetchEnterprisePartners() {
+    try {
+        // Fetch all active enterprise partners mapped in the database
+        const res = await storeFetchWithAuth(`${BACKEND_URL}/api/stores?type=ENTERPRISE`);
+        const result = await res.json();
+        if (result.success && result.data && result.data.length > 0) {
+            renderEnterpriseCarousel(result.data);
+        }
+    } catch(e) {
+        console.warn("Could not load enterprise partners for Store-in-Store UI", e);
+    }
+}
+
+function renderEnterpriseCarousel(stores) {
+    let carousel = document.getElementById('enterprise-carousel');
+    if (!carousel) {
+        carousel = document.createElement('div');
+        carousel.id = 'enterprise-carousel';
+        carousel.className = 'enterprise-carousel';
+        // Beautiful horizontal scrolling ribbon
+        carousel.style.cssText = 'display: flex; gap: 12px; overflow-x: auto; padding: 10px 0; margin-bottom: 20px; scrollbar-width: none;';
+        storefront.parentNode.insertBefore(carousel, storefront);
+    }
+    carousel.innerHTML = '';
+    
+    // Add "All" button to clear filter
+    const allBtn = document.createElement('button');
+    allBtn.style.cssText = 'padding: 8px 16px; border-radius: 20px; background: #e2e8f0; color: #334155; border: none; font-weight: bold; cursor: pointer; white-space: nowrap; flex-shrink: 0;';
+    allBtn.textContent = `🌐 All Stores`;
+    allBtn.onclick = () => filterCategory('All');
+    carousel.appendChild(allBtn);
+
+    stores.forEach(store => {
+        const btn = document.createElement('button');
+        btn.style.cssText = 'padding: 8px 16px; border-radius: 20px; background: #1e293b; color: white; border: none; font-weight: bold; cursor: pointer; white-space: nowrap; flex-shrink: 0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);';
+        btn.textContent = `🏪 ${store.name}`;
+        btn.onclick = () => filterByEnterpriseStore(store._id, store.name);
+        carousel.appendChild(btn);
+    });
+}
+
+function filterByEnterpriseStore(storeId, storeName) {
+    document.getElementById('search-input').value = '';
+    const title = document.getElementById('product-grid-title');
+    title.textContent = `Store-in-Store: ${storeName}`;
+    
+    // Dynamically filter global catalog down to ONLY what is actively stocked by this partner
+    const filtered = allProducts.filter(p => {
+        return p.variants && p.variants.some(v => v.storeId === storeId);
+    });
+    
+    renderProducts(filtered);
+    title.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+// -----------------------------------------------------------
+
 async function fetchProducts() { 
     try { 
         let url = `${BACKEND_URL}/api/products`;
@@ -345,7 +402,13 @@ function renderProducts(productsToRender) {
         
         const trustBadge = document.createElement('div');
         trustBadge.style.cssText = 'font-size: 11px; color: #64748b; margin-top: 4px; font-weight: 600;';
-        trustBadge.textContent = `🏪 ${storeName} • ${rating}`;
+        // --- VISUAL ENHANCEMENT: Store-in-Store Trust Display ---
+        if (displayVariant.storeType === 'ENTERPRISE') {
+            trustBadge.style.color = '#3b82f6'; // Blue highlight for Enterprise APIs
+            trustBadge.textContent = `🚀 Fulfilled by ${storeName} • ${rating}`;
+        } else {
+            trustBadge.textContent = `🏪 ${storeName} • ${rating}`;
+        }
         
         textInfo.appendChild(title);
         textInfo.appendChild(weight);
@@ -452,8 +515,6 @@ function quickAdd(productId) {
     const displayVariant = (p.variants && p.variants.length > 0) ? p.variants[0] : { price: 0, weightOrVolume: 'N/A', storeId: null }; 
 
     // --- MODIFIED: OMNICHANNEL HYBRID CART GUARD ---
-    // The strict cart isolation check is now controlled by the ENABLE_CART_ISOLATION toggle.
-    // By default, this is turned off so users can add products from any store into a single global cart.
     if (ENABLE_CART_ISOLATION && cart.length > 0 && displayVariant.storeId && cart[0].storeId && cart[0].storeId !== displayVariant.storeId) {
         pendingProductToAdd = { ...p, targetVariant: displayVariant };
         document.getElementById('isolation-modal').classList.remove('hidden');
@@ -653,7 +714,6 @@ function setDeliveryType(type) {
     document.getElementById('routine-options').classList.toggle('hidden', type === 'Instant'); 
 }
 
-// --- NEW: Toggle Payment Method ---
 window.setPaymentMethod = function(method) {
     selectedPaymentMethod = method;
     document.getElementById('tab-pay-cod').classList.toggle('active', method === 'Cash');
@@ -868,7 +928,6 @@ async function checkOrderStatus() {
             card.appendChild(schedBadge);
             card.appendChild(totalDiv);
 
-            // --- NEW: Render Shadowfax live tracking link if provided by backend ---
             if (order.trackingLink) {
                 const trackingBtn = document.createElement('a');
                 trackingBtn.href = order.trackingLink;
@@ -993,5 +1052,6 @@ document.addEventListener('DOMContentLoaded', () => {
     updateAuthUI();
 
     fetchCategories(); 
+    fetchEnterprisePartners(); // New Phase 4 Trigger
     initializeLocationAndFetch();
 });
