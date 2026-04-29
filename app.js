@@ -1412,6 +1412,79 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 
+// ============================================================================
+// --- NEW: PHASE 13 CONSUMER LIVE MAP INJECTION ---
+// ============================================================================
+let consumerLiveMap = null;
+let riderMarker = null;
+let consumerTrackingWS = null;
+
+const originalCheckOrderStatusPhase13 = checkOrderStatus;
+checkOrderStatus = async function() {
+    await originalCheckOrderStatusPhase13();
+
+    setTimeout(() => {
+        const content = document.getElementById('tracking-content');
+        if (!content) return;
+        
+        // If the order has dispatched, inject the map
+        if (content.innerHTML.includes('Dispatched') && !content.innerHTML.includes('live-rider-map')) {
+            const savedOrderId = localStorage.getItem('dailyPick_activeOrderId');
+            if(!savedOrderId) return;
+
+            // Dynamically load Leaflet safely so we don't need to alter index.html
+            if (typeof L === 'undefined') {
+                const leafletCss = document.createElement('link');
+                leafletCss.rel = 'stylesheet';
+                leafletCss.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+                document.head.appendChild(leafletCss);
+
+                const leafletJs = document.createElement('script');
+                leafletJs.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+                document.head.appendChild(leafletJs);
+                
+                leafletJs.onload = () => initializeLiveMap(savedOrderId);
+            } else {
+                initializeLiveMap(savedOrderId);
+            }
+        }
+    }, 800);
+};
+
+function initializeLiveMap(orderId) {
+    const mapContainer = document.createElement('div');
+    mapContainer.id = 'live-rider-map';
+    mapContainer.style.cssText = 'width: 100%; height: 250px; margin-top: 20px; border-radius: 8px; z-index: 1;';
+    
+    document.getElementById('tracking-content').appendChild(mapContainer);
+
+    // Default to Pimpri-Chinchwad / Pune fallback
+    const defaultLat = userLat || 18.6298;
+    const defaultLng = userLng || 73.7997;
+
+    consumerLiveMap = L.map('live-rider-map').setView([defaultLat, defaultLng], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(consumerLiveMap);
+    
+    // Custom Rider Emoji Marker
+    const riderIcon = L.divIcon({ html: '<div style="font-size: 24px;">🛵</div>', className: '', iconSize: [24, 24], iconAnchor: [12, 12] });
+    riderMarker = L.marker([defaultLat, defaultLng], { icon: riderIcon }).addTo(consumerLiveMap);
+
+    // Connect to the WebSocket we just built
+    if (consumerTrackingWS) consumerTrackingWS.close();
+    consumerTrackingWS = new WebSocket(`wss://dailypick-backend-production-05d6.up.railway.app/api/ws/track?orderId=${orderId}`);
+
+    consumerTrackingWS.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            if (data.lat && data.lng) {
+                const newLatLng = new L.LatLng(data.lat, data.lng);
+                riderMarker.setLatLng(newLatLng);
+                consumerLiveMap.panTo(newLatLng); // Follow the rider smoothly
+            }
+        } catch(e) {}
+    };
+}
+
 // --- SECURE UI EXPORTS (For DOM bindings) ---
 window.quickAdd = quickAdd;
 window.openCustomerLogin = openCustomerLogin;
