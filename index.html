@@ -244,5 +244,28 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     
     <script src="app.js"></script>
+
+    <style>
+        .discovery-carousel { display: flex; gap: 12px; overflow-x: auto; padding: 10px 16px; scrollbar-width: none; }
+        .discovery-carousel::-webkit-scrollbar { display: none; }
+        .discovery-card { min-width: 240px; background: white; border-radius: 12px; padding: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; cursor: pointer; flex-shrink: 0; }
+        .discovery-title { font-size: 14px; font-weight: 800; color: #0f172a; margin: 0 0 4px 0; }
+        .discovery-meta { font-size: 11px; color: #64748b; margin: 0; font-weight: 600; }
+        .discovery-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; margin-top: 8px; }
+        .badge-enterprise { background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }
+        .badge-quick { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+    </style>
+    
+    <div id="discovery-injection-point" style="display: none;">
+        <section id="discovery-section" style="margin-bottom: 24px;">
+            <div style="padding: 0 16px; display: flex; justify-content: space-between; align-items: flex-end;">
+                <div>
+                    <h2 class="section-title" style="margin: 0;">Stores Near You</h2>
+                    <p style="font-size: 12px; color: #64748b; margin: 2px 0 0 0;">Omni-Cart Compatible</p>
+                </div>
+            </div>
+            <div id="discovery-lists-container"></div>
+        </section>
+    </div>
 </body>
 </html>
