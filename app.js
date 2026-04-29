@@ -1494,3 +1494,94 @@ window.verifyOTP = verifyOTP;
 window.logoutCustomer = logoutCustomer;
 
 })();
+
+// ============================================================================
+// --- NEW: PHASE 10 HYPER-LOCAL DISCOVERY API FETCH & RENDER ---
+// ============================================================================
+(function() {
+    const BACKEND_URL = 'https://dailypick-backend-production-05d6.up.railway.app';
+    
+    async function storeFetchWithAuth(url, options = {}) {
+        const token = localStorage.getItem('dailyPick_customerToken'); 
+        options.headers = options.headers || {};
+        if (token) options.headers['Authorization'] = `Bearer ${token}`;
+        return fetch(url, options);
+    }
+
+    async function fetchDiscoveryStores(lat, lng) {
+        try {
+            const res = await storeFetchWithAuth(`${BACKEND_URL}/api/stores/discover?lat=${lat}&lng=${lng}`);
+            const result = await res.json();
+            
+            if (result.success && result.data) {
+                renderDiscoveryUI(result.data);
+            }
+        } catch(e) {
+            console.warn("Discovery API unavailable", e);
+        }
+    }
+
+    function renderDiscoveryUI(data) {
+        const injectionPoint = document.getElementById('discovery-injection-point');
+        const promoSection = document.querySelector('.promo-banners');
+        
+        if (injectionPoint && promoSection && promoSection.parentNode) {
+            promoSection.parentNode.insertBefore(injectionPoint, promoSection.nextSibling);
+            injectionPoint.style.display = 'block';
+            
+            const container = document.getElementById('discovery-lists-container');
+            container.innerHTML = '';
+            
+            if (data.megaMarts && data.megaMarts.length > 0) {
+                const megaLabel = document.createElement('h3');
+                megaLabel.style.cssText = 'font-size: 13px; font-weight: 800; color: #475569; margin: 16px 16px 8px 16px; text-transform: uppercase; letter-spacing: 0.5px;';
+                megaLabel.textContent = '🏢 Mega Marts (Next Day)';
+                container.appendChild(megaLabel);
+                
+                const carousel = document.createElement('div');
+                carousel.className = 'discovery-carousel';
+                data.megaMarts.forEach(store => {
+                    carousel.innerHTML += `
+                        <div class="discovery-card">
+                            <h4 class="discovery-title">${store.name}</h4>
+                            <p class="discovery-meta">★ ${store.metrics?.rating || '4.8'} • ${(store.distanceInMeters/1000).toFixed(1)} km away</p>
+                            <span class="discovery-badge badge-enterprise">Enterprise ERP Synced</span>
+                        </div>
+                    `;
+                });
+                container.appendChild(carousel);
+            }
+            
+            if (data.quickCommerce && data.quickCommerce.length > 0) {
+                const quickLabel = document.createElement('h3');
+                quickLabel.style.cssText = 'font-size: 13px; font-weight: 800; color: #475569; margin: 16px 16px 8px 16px; text-transform: uppercase; letter-spacing: 0.5px;';
+                quickLabel.textContent = '⚡ Quick Commerce (15 Mins)';
+                container.appendChild(quickLabel);
+                
+                const carousel = document.createElement('div');
+                carousel.className = 'discovery-carousel';
+                data.quickCommerce.forEach(store => {
+                    carousel.innerHTML += `
+                        <div class="discovery-card">
+                            <h4 class="discovery-title">${store.name}</h4>
+                            <p class="discovery-meta">★ ${store.metrics?.rating || '4.5'} • ${(store.distanceInMeters/1000).toFixed(1)} km away</p>
+                            <span class="discovery-badge badge-quick">Platform Delivery Fleet</span>
+                        </div>
+                    `;
+                });
+                container.appendChild(carousel);
+            }
+        }
+    }
+
+    const originalNavGeolocation = navigator.geolocation.getCurrentPosition;
+    if (originalNavGeolocation) {
+        navigator.geolocation.getCurrentPosition = function(success, error, options) {
+            const wrappedSuccess = function(position) {
+                fetchDiscoveryStores(position.coords.latitude, position.coords.longitude);
+                if (success) success(position);
+            };
+            return originalNavGeolocation.call(navigator.geolocation, wrappedSuccess, error, options);
+        };
+    }
+})();
