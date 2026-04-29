@@ -1126,3 +1126,83 @@ window.updateGlobalCartUI = function() {
 };
 
 updateGlobalCartUI = window.updateGlobalCartUI;
+
+// ============================================================================
+// --- NEW: PHASE 6 OMNI-LOYALTY ENGINE (SUPER WALLET) ---
+// ============================================================================
+let customerLoyaltyBalance = 0;
+let isLoyaltyApplied = false;
+
+const originalUpdateAuthUIPhase6 = window.updateAuthUI;
+window.updateAuthUI = async function() {
+    if (typeof originalUpdateAuthUIPhase6 === 'function') originalUpdateAuthUIPhase6();
+    
+    const token = localStorage.getItem('dailyPick_customerToken');
+    if (token) {
+        try {
+            const res = await storeFetchWithAuth(`${BACKEND_URL}/api/customers/me`);
+            const result = await res.json();
+            if (result.success && result.data) {
+                customerLoyaltyBalance = result.data.loyaltyPoints || 0;
+                if (customerLoyaltyBalance > 0) {
+                    document.getElementById('loyalty-wallet-container').classList.remove('hidden');
+                    document.getElementById('loyalty-balance-display').textContent = `Rs ${customerLoyaltyBalance}`;
+                }
+            }
+        } catch(e) { console.warn("Loyalty fetch failed", e); }
+    } else {
+        customerLoyaltyBalance = 0;
+        isLoyaltyApplied = false;
+        if(document.getElementById('use-loyalty-toggle')) document.getElementById('use-loyalty-toggle').checked = false;
+        if(document.getElementById('loyalty-wallet-container')) document.getElementById('loyalty-wallet-container').classList.add('hidden');
+    }
+};
+
+window.toggleLoyaltyPoints = function() {
+    isLoyaltyApplied = document.getElementById('use-loyalty-toggle').checked;
+    window.updateGlobalCartUI();
+};
+
+const originalUpdateGlobalCartUIPhase6 = window.updateGlobalCartUI;
+window.updateGlobalCartUI = function() {
+    originalUpdateGlobalCartUIPhase6();
+    
+    if (cart.length === 0) return;
+
+    const groupedCart = {};
+    cart.forEach(item => {
+        const sId = item.storeId || 'default';
+        if (!groupedCart[sId]) groupedCart[sId] = true;
+    });
+    const uniqueStores = Object.keys(groupedCart).length;
+    
+    const subtotal = cart.reduce((s, i) => s + (i.currentPrice * i.qty), 0);
+    const totalDeliveryFee = uniqueStores === 0 ? 0 : (DELIVERY_FEE * uniqueStores);
+    let finalTotal = subtotal + totalDeliveryFee;
+    let discountApplied = 0;
+
+    if (isLoyaltyApplied && customerLoyaltyBalance > 0) {
+        discountApplied = Math.min(customerLoyaltyBalance, subtotal); 
+        finalTotal -= discountApplied;
+        
+        document.getElementById('loyalty-discount-row').classList.remove('hidden');
+        document.getElementById('cart-loyalty-discount').textContent = `-Rs ${discountApplied}`;
+    } else {
+        document.getElementById('loyalty-discount-row').classList.add('hidden');
+    }
+
+    document.getElementById('cart-total').textContent = `Rs ${finalTotal}`;
+};
+
+// Intercept standard fetch to silently append the loyalty boolean to the checkout JSON payload
+const originalStoreFetchWithAuthPhase6 = window.storeFetchWithAuth;
+window.storeFetchWithAuth = async function(url, options = {}) {
+    if (url.includes('/api/orders/omni-checkout') && options.body) {
+        try {
+            let payload = JSON.parse(options.body);
+            payload.useLoyaltyPoints = isLoyaltyApplied;
+            options.body = JSON.stringify(payload);
+        } catch(e) {}
+    }
+    return await originalStoreFetchWithAuthPhase6(url, options);
+};
