@@ -1206,3 +1206,71 @@ window.storeFetchWithAuth = async function(url, options = {}) {
     }
     return await originalStoreFetchWithAuthPhase6(url, options);
 };
+
+// ============================================================================
+// --- NEW: PHASE 10 ALGORITHMIC SMART CART UPSELLS ---
+// ============================================================================
+const originalUpdateGlobalCartUIPhase10 = window.updateGlobalCartUI;
+
+window.updateGlobalCartUI = function() {
+    originalUpdateGlobalCartUIPhase10();
+    
+    // Fire async fetch safely outside the main synchronous render thread
+    setTimeout(async () => {
+        const upsellsContainer = document.getElementById('smart-cart-upsells-container');
+        const upsellsList = document.getElementById('smart-cart-upsells-list');
+        
+        if (cart.length === 0 || !upsellsContainer || !upsellsList) {
+            if(upsellsContainer) upsellsContainer.classList.add('hidden');
+            return;
+        }
+        
+        const cartCategories = [...new Set(cart.map(item => item.category).filter(Boolean))];
+        
+        try {
+            const res = await storeFetchWithAuth(`${BACKEND_URL}/api/products/smart-upsells`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cartCategories, storeId: cart[0].storeId })
+            });
+            const result = await res.json();
+            
+            if (result.success && result.data && result.data.length > 0) {
+                upsellsList.innerHTML = '';
+                
+                // Filter out items that are already inside the user's cart
+                const cartIds = cart.map(i => i._id.toString());
+                const filteredUpsells = result.data.filter(u => !cartIds.includes(u._id.toString())).slice(0, 3);
+                
+                if (filteredUpsells.length === 0) {
+                    upsellsContainer.classList.add('hidden');
+                    return;
+                }
+                
+                filteredUpsells.forEach(item => {
+                    const v = item.variants[0];
+                    upsellsList.innerHTML += `
+                        <div style="flex-shrink: 0; width: 120px; background: white; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px; text-align: center;">
+                            <img src="${optimizeCloudinaryUrl(item.imageUrl, 100) || ''}" style="width: 60px; height: 60px; object-fit: contain; margin-bottom: 8px;" onerror="this.style.display='none'">
+                            <p style="font-size: 11px; font-weight: 700; margin: 0 0 4px 0; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</p>
+                            <p style="font-size: 11px; color: #16a34a; font-weight: 800; margin: 0 0 8px 0;">Rs ${v.price}</p>
+                            <button onclick="quickAdd('${item._id}')" style="background: #e2e8f0; color: #0f172a; border: none; padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; cursor: pointer; width: 100%;">+ ADD</button>
+                        </div>
+                    `;
+                    
+                    // Add items to allProducts array temporarily so quickAdd can find them
+                    if (!allProducts.find(p => p._id === item._id)) {
+                        allProducts.push(item);
+                    }
+                });
+                
+                upsellsContainer.classList.remove('hidden');
+            } else {
+                upsellsContainer.classList.add('hidden');
+            }
+        } catch (e) {
+            console.warn("Smart Upsells failed to load", e);
+            upsellsContainer.classList.add('hidden');
+        }
+    }, 10);
+};
