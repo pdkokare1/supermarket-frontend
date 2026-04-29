@@ -1086,3 +1086,43 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchEnterprisePartners(); 
     initializeLocationAndFetch();
 });
+
+// ============================================================================
+// --- NEW: PHASE 4 OMNI-CART CONSUMER UI ENHANCEMENT ---
+// ============================================================================
+// Safely overwriting updateGlobalCartUI to add dynamic delivery ETAs without deleting legacy logic
+const legacyUpdateGlobalCartUI = updateGlobalCartUI;
+window.updateGlobalCartUI = function() {
+    legacyUpdateGlobalCartUI(); 
+    
+    const groups = document.querySelectorAll('#cart-items-container > div');
+    groups.forEach(group => {
+        if (group.textContent.includes('📦 Fulfilled by')) {
+            const isEnterprise = !group.textContent.includes('DailyPick Platform');
+            
+            const deliveryEta = document.createElement('div');
+            deliveryEta.style.cssText = `font-size: 10px; font-weight: 700; margin-top: 4px; padding: 2px 6px; border-radius: 4px; display: inline-block; ${isEnterprise ? 'background: #dbeafe; color: #0369a1;' : 'background: #dcfce7; color: #166534;'}`;
+            deliveryEta.textContent = isEnterprise ? '🚚 Enterprise Delivery (Next Day)' : '⚡ Platform Delivery (15 Mins)';
+            
+            group.appendChild(deliveryEta);
+        }
+    });
+
+    const uniqueStores = [...new Set(cart.map(i => i.storeId || 'default'))];
+    const header = document.querySelector('.cart-header');
+    let existingBanner = document.getElementById('omni-cart-banner');
+
+    if (uniqueStores.length > 1) {
+        if (!existingBanner) {
+            existingBanner = document.createElement('div');
+            existingBanner.id = 'omni-cart-banner';
+            existingBanner.style.cssText = "background: #eef2ff; padding: 12px; border-bottom: 1px solid #cbd5e1; text-align: center;";
+            existingBanner.innerHTML = '<p style="font-size: 12px; font-weight: 800; color: #3b82f6; margin: 0;">Omni-Cart Active</p><p style="font-size: 11px; color: #475569; margin: 4px 0 0 0;">Items will arrive in separate shipments.</p>';
+            header.parentNode.insertBefore(existingBanner, header.nextSibling);
+        }
+    } else {
+        if (existingBanner) existingBanner.remove();
+    }
+};
+
+updateGlobalCartUI = window.updateGlobalCartUI;
