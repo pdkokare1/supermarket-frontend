@@ -1,4 +1,9 @@
-/* app.js */
+/* supermarket-frontend/app.js */
+
+// ============================================================================
+// --- SECURE GLOBAL STATE ENCAPSULATION MODULE ---
+// ============================================================================
+(function() {
 const BACKEND_URL = 'https://dailypick-backend-production-05d6.up.railway.app';
 const DELIVERY_FEE = 20;
 
@@ -507,7 +512,7 @@ function filterByTag(tag, displayTitle) {
 
 let searchDebounceTimeout = null;
 
-async function handleSearch(event) { 
+let handleSearch = async function(event) { 
     const query = event.target.value.toLowerCase().trim(); 
     if (!query) { filterCategory('All'); return; } 
     if (query.length < 2) return; 
@@ -634,7 +639,7 @@ function updateCardActionUI(productId) {
     } 
 }
 
-function updateGlobalCartUI() { 
+let updateGlobalCartUI = function() { 
     const totalItems = cart.reduce((s, i) => s + i.qty, 0); 
     const subtotal = cart.reduce((s, i) => s + (i.currentPrice * i.qty), 0); 
     
@@ -810,7 +815,8 @@ async function placeOrder() {
         deliveryType: selectedDeliveryType // Passing frontend selection to Omni-Cart handler
     }));
 
-    const idempotencyKey = 'OMNI-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9);
+    // OPTIMIZATION: Phase 2 Cryptographically Secure Random UUID for idempotency
+    const idempotencyKey = 'OMNI-' + Date.now() + '-' + (window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : Math.random().toString(36).substring(2, 9));
     
     const finalizeBackendOrder = async (transactionId = null) => {
         try { 
@@ -868,8 +874,16 @@ async function placeOrder() {
             return;
         }
         
+        // OPTIMIZATION: Phase 2 Dynamic Secure Configuration Fetch
+        let razorpayKey = 'rzp_test_dummykey';
+        try {
+            const configRes = await fetch(`${BACKEND_URL}/api/config/gateway`);
+            const configData = await configRes.json();
+            if (configData.success) razorpayKey = configData.key;
+        } catch(e) {}
+
         var options = {
-            "key": "rzp_test_dummykey", 
+            "key": razorpayKey, 
             "amount": finalTotal * 100, 
             "currency": "INR",
             "name": "DailyPick",
@@ -893,7 +907,7 @@ async function placeOrder() {
     }
 }
 
-async function checkOrderStatus() { 
+let checkOrderStatus = async function() { 
     const savedOrderId = localStorage.getItem('dailyPick_activeOrderId'); 
     
     if (!savedOrderId) {
@@ -1092,7 +1106,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================================================
 // Safely overwriting updateGlobalCartUI to add dynamic delivery ETAs without deleting legacy logic
 const legacyUpdateGlobalCartUI = updateGlobalCartUI;
-window.updateGlobalCartUI = function() {
+updateGlobalCartUI = function() {
     legacyUpdateGlobalCartUI(); 
     
     const groups = document.querySelectorAll('#cart-items-container > div');
@@ -1125,16 +1139,14 @@ window.updateGlobalCartUI = function() {
     }
 };
 
-updateGlobalCartUI = window.updateGlobalCartUI;
-
 // ============================================================================
 // --- NEW: PHASE 6 OMNI-LOYALTY ENGINE (SUPER WALLET) ---
 // ============================================================================
 let customerLoyaltyBalance = 0;
 let isLoyaltyApplied = false;
 
-const originalUpdateAuthUIPhase6 = window.updateAuthUI;
-window.updateAuthUI = async function() {
+const originalUpdateAuthUIPhase6 = updateAuthUI;
+updateAuthUI = async function() {
     if (typeof originalUpdateAuthUIPhase6 === 'function') originalUpdateAuthUIPhase6();
     
     const token = localStorage.getItem('dailyPick_customerToken');
@@ -1160,11 +1172,11 @@ window.updateAuthUI = async function() {
 
 window.toggleLoyaltyPoints = function() {
     isLoyaltyApplied = document.getElementById('use-loyalty-toggle').checked;
-    window.updateGlobalCartUI();
+    updateGlobalCartUI();
 };
 
-const originalUpdateGlobalCartUIPhase6 = window.updateGlobalCartUI;
-window.updateGlobalCartUI = function() {
+const originalUpdateGlobalCartUIPhase6 = updateGlobalCartUI;
+updateGlobalCartUI = function() {
     originalUpdateGlobalCartUIPhase6();
     
     if (cart.length === 0) return;
@@ -1195,8 +1207,8 @@ window.updateGlobalCartUI = function() {
 };
 
 // Intercept standard fetch to silently append the loyalty boolean to the checkout JSON payload
-const originalStoreFetchWithAuthPhase6 = window.storeFetchWithAuth;
-window.storeFetchWithAuth = async function(url, options = {}) {
+const originalStoreFetchWithAuthPhase6 = storeFetchWithAuth;
+storeFetchWithAuth = async function(url, options = {}) {
     if (url.includes('/api/orders/omni-checkout') && options.body) {
         try {
             let payload = JSON.parse(options.body);
@@ -1210,9 +1222,9 @@ window.storeFetchWithAuth = async function(url, options = {}) {
 // ============================================================================
 // --- NEW: PHASE 10 ALGORITHMIC SMART CART UPSELLS ---
 // ============================================================================
-const originalUpdateGlobalCartUIPhase10 = window.updateGlobalCartUI;
+const originalUpdateGlobalCartUIPhase10 = updateGlobalCartUI;
 
-window.updateGlobalCartUI = function() {
+updateGlobalCartUI = function() {
     originalUpdateGlobalCartUIPhase10();
     
     // Fire async fetch safely outside the main synchronous render thread
@@ -1340,7 +1352,7 @@ handleSearch = async function(event) {
 // ============================================================================
 const originalCheckOrderStatusPhase11 = checkOrderStatus;
 
-window.checkOrderStatus = async function() {
+checkOrderStatus = async function() {
     await originalCheckOrderStatusPhase11();
     
     // Give the DOM a moment to render the tracking content
@@ -1399,3 +1411,13 @@ document.addEventListener('visibilitychange', () => {
         }
     }
 });
+
+// --- SECURE UI EXPORTS (For DOM bindings) ---
+window.quickAdd = quickAdd;
+window.openCustomerLogin = openCustomerLogin;
+window.closeCustomerLogin = closeCustomerLogin;
+window.requestOTP = requestOTP;
+window.verifyOTP = verifyOTP;
+window.logoutCustomer = logoutCustomer;
+
+})();
