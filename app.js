@@ -290,7 +290,7 @@ function renderEnterpriseCarousel(stores) {
         const btn = document.createElement('button');
         btn.style.cssText = 'padding: 8px 16px; border-radius: 20px; background: #1e293b; color: white; border: none; font-weight: bold; cursor: pointer; white-space: nowrap; flex-shrink: 0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);';
         btn.textContent = `🏪 ${store.name}`;
-        btn.onclick = () => filterByEnterpriseStore(store._id, store.name);
+        btn.onclick = () => filterByEnterpriseStore(storeId, store.name);
         carousel.appendChild(btn);
     });
 }
@@ -1273,4 +1273,112 @@ window.updateGlobalCartUI = function() {
             upsellsContainer.classList.add('hidden');
         }
     }, 10);
+};
+
+// ============================================================================
+// --- NEW: PHASE 11 $0 IN-MEMORY FUZZY & SYNONYM SEARCH ENGINE ---
+// ============================================================================
+const commonSynonyms = {
+    "late night": ["chips", "snack", "coke", "soda", "chocolate", "munchies", "ice cream"],
+    "morning": ["milk", "bread", "butter", "eggs", "coffee", "tea"],
+    "cleaning": ["soap", "detergent", "broom", "mop", "phenyl", "harpic"],
+    "party": ["cold drink", "soda", "chips", "namkeen", "disposable", "cups"],
+    "sick": ["medicine", "soup", "honey", "tea", "vicks", "crocin"],
+    "mlik": ["milk"],
+    "bred": ["bread"],
+    "shmpoo": ["shampoo"],
+    "sope": ["soap"],
+    "cravings": ["chips", "chocolate", "soda", "snack"]
+};
+
+// Override the global handleSearch function safely before DOM bindings
+handleSearch = async function(event) { 
+    const rawQuery = event.target.value.toLowerCase().trim(); 
+    if (!rawQuery) { filterCategory('All'); return; } 
+    if (rawQuery.length < 2) return; 
+    
+    document.getElementById('product-grid-title').textContent = `Searching...`;
+    
+    clearTimeout(searchDebounceTimeout);
+    searchDebounceTimeout = setTimeout(() => {
+        let searchTerms = rawQuery.split(' ');
+        
+        // Inject synonyms into search terms array
+        for (const [key, related] of Object.entries(commonSynonyms)) {
+            if (rawQuery.includes(key)) {
+                searchTerms.push(...related);
+            }
+        }
+        
+        // $0 Cost In-Memory Heuristic Search
+        const scoredProducts = allProducts.map(p => {
+            let score = 0;
+            const pName = (p.name || '').toLowerCase();
+            const pCat = (p.category || '').toLowerCase();
+            const pTags = (p.searchTags || '').toLowerCase();
+            
+            searchTerms.forEach(term => {
+                if (pName.includes(term)) score += 10;
+                if (pCat.includes(term)) score += 5;
+                if (pTags.includes(term)) score += 5;
+                
+                // Extremely basic fuzzy matching (ignores last character typo)
+                if (term.length > 3 && pName.includes(term.substring(0, term.length - 1))) score += 2;
+            });
+            return { product: p, score };
+        }).filter(item => item.score > 0)
+          .sort((a, b) => b.score - a.score)
+          .map(item => item.product);
+
+        document.getElementById('product-grid-title').textContent = `Search Results`;
+        renderProducts(scoredProducts);
+    }, 300);
+};
+
+// ============================================================================
+// --- NEW: PHASE 11 CUSTOMER RATING & FEEDBACK UI TRIGGERS ---
+// ============================================================================
+const originalCheckOrderStatusPhase11 = checkOrderStatus;
+
+window.checkOrderStatus = async function() {
+    await originalCheckOrderStatusPhase11();
+    
+    // Give the DOM a moment to render the tracking content
+    setTimeout(() => {
+        const savedOrderId = localStorage.getItem('dailyPick_activeOrderId');
+        const content = document.getElementById('tracking-content');
+        
+        // If the order has reached terminal "Completed" state, prompt for feedback
+        if (savedOrderId && content && content.innerHTML.includes('Completed')) {
+            if (localStorage.getItem(`rated_${savedOrderId}`)) return; // Already rated
+            
+            const ratingContainer = document.getElementById('customer-rating-modal');
+            if (ratingContainer) {
+                ratingContainer.classList.remove('hidden');
+                ratingContainer.setAttribute('data-order-id', savedOrderId);
+            }
+        }
+    }, 500); 
+};
+
+window.submitOrderRating = async function(score) {
+    const modal = document.getElementById('customer-rating-modal');
+    if (!modal) return;
+    
+    const orderId = modal.getAttribute('data-order-id');
+    
+    // Optimistic UI interaction
+    modal.innerHTML = '<div style="padding: 24px; text-align: center;"><h3 style="color:#0f172a;">Thank you for your feedback! ❤️</h3><p style="color:#64748B; font-size:14px;">We are constantly improving.</p></div>';
+    setTimeout(() => modal.classList.add('hidden'), 2000);
+    
+    if (orderId) {
+        localStorage.setItem(`rated_${orderId}`, 'true');
+        try {
+            await storeFetchWithAuth(`${BACKEND_URL}/api/orders/${orderId}/rate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rating: score })
+            });
+        } catch(e) {}
+    }
 };
