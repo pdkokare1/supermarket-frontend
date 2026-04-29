@@ -210,6 +210,22 @@
         </div>
     </div>
 
+    <div id="customer-rating-modal" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
+        <div style="background: white; padding: 24px; border-radius: 16px; width: 90%; max-width: 320px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+            <div style="font-size: 40px; margin-bottom: 12px;">⭐</div>
+            <h3 style="margin-top: 0; color: #0f172a;">Rate Your Delivery</h3>
+            <p style="color: #64748B; font-size: 14px; margin: 12px 0 24px; line-height: 1.5;">How was your DailyPick experience today?</p>
+            <div style="display: flex; justify-content: center; gap: 8px;">
+                <button onclick="submitOrderRating(1)" style="font-size: 24px; background: none; border: none; cursor: pointer;">⭐</button>
+                <button onclick="submitOrderRating(2)" style="font-size: 24px; background: none; border: none; cursor: pointer;">⭐</button>
+                <button onclick="submitOrderRating(3)" style="font-size: 24px; background: none; border: none; cursor: pointer;">⭐</button>
+                <button onclick="submitOrderRating(4)" style="font-size: 24px; background: none; border: none; cursor: pointer;">⭐</button>
+                <button onclick="submitOrderRating(5)" style="font-size: 24px; background: none; border: none; cursor: pointer;">⭐</button>
+            </div>
+            <button onclick="document.getElementById('customer-rating-modal').classList.add('hidden')" style="margin-top: 24px; width: 100%; padding: 12px; background: #e2e8f0; color: #475569; border: none; border-radius: 8px; font-weight: 800; cursor: pointer;">Skip</button>
+        </div>
+    </div>
+
     <div id="omni-cart-split-banner" class="hidden" style="background: #eef2ff; padding: 12px; margin-bottom: 16px; border-radius: 8px; border: 1px solid #cbd5e1;">
         <p style="font-size: 12px; font-weight: 800; color: #334155; margin: 0;"><i data-lucide="info" class="icon-sm"></i> Omni-Cart Active</p>
         <p style="font-size: 11px; color: #475569; margin: 4px 0 0 0;">Your cart contains items from multiple fulfillment zones. Delivery speeds may vary.</p>
