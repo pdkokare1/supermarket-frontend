@@ -1382,3 +1382,20 @@ window.submitOrderRating = async function(score) {
         } catch(e) {}
     }
 };
+
+// ============================================================================
+// --- NEW: PHASE 12 ABANDONED CART RECOVERY ENGINE ---
+// ============================================================================
+document.addEventListener('visibilitychange', () => {
+    // Triggers silently if the user closes or backgrounds the tab
+    if (document.visibilityState === 'hidden' && cart && cart.length > 0) {
+        const token = localStorage.getItem('dailyPick_customerToken');
+        if (token) {
+            // Uses navigator.sendBeacon to ensure the payload is delivered even as the page unloads
+            navigator.sendBeacon(`${BACKEND_URL}/api/orders/abandoned-cart`, JSON.stringify({
+                cartSnapshot: cart,
+                timestamp: new Date().toISOString()
+            }));
+        }
+    }
+});
