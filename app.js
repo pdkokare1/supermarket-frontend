@@ -307,6 +307,29 @@ function filterByEnterpriseStore(storeId, storeName) {
     });
     
     renderProducts(filtered);
+    
+    // --- NEW: PHASE 3 STORE-IN-STORE BRANDING ---
+    const banner = document.getElementById('partner-brand-banner');
+    const nameEl = document.getElementById('partner-brand-name');
+    const logoEl = document.getElementById('partner-brand-logo');
+    
+    if (banner && nameEl && logoEl) {
+        nameEl.textContent = storeName;
+        logoEl.textContent = storeName.charAt(0).toUpperCase();
+        
+        if (storeName.toLowerCase().includes('croma')) {
+            banner.style.background = 'linear-gradient(135deg, #0f766e, #0f172a)'; 
+        } else if (storeName.toLowerCase().includes('reliance')) {
+            banner.style.background = 'linear-gradient(135deg, #b91c1c, #0f172a)'; 
+        } else if (storeName.toLowerCase().includes('dmart') || storeName.toLowerCase().includes('d mart')) {
+            banner.style.background = 'linear-gradient(135deg, #15803d, #0f172a)'; 
+        } else {
+            banner.style.background = 'linear-gradient(135deg, #1e293b, #0f172a)'; 
+        }
+        banner.classList.remove('hidden');
+    }
+    // --------------------------------------------
+
     title.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -482,6 +505,11 @@ function filterCategory(category) {
     document.getElementById('search-input').value = ''; 
     const title = document.getElementById('product-grid-title');
     
+    // --- NEW: PHASE 3 STORE-IN-STORE BRANDING ---
+    const banner = document.getElementById('partner-brand-banner');
+    if (banner) banner.classList.add('hidden');
+    // --------------------------------------------
+
     if (category === 'All') { 
         title.textContent = 'All Products'; 
         renderProducts(allProducts); 
@@ -498,6 +526,11 @@ function filterByTag(tag, displayTitle) {
     const title = document.getElementById('product-grid-title'); 
     title.textContent = displayTitle;
     
+    // --- NEW: PHASE 3 STORE-IN-STORE BRANDING ---
+    const banner = document.getElementById('partner-brand-banner');
+    if (banner) banner.classList.add('hidden');
+    // --------------------------------------------
+
     renderProducts(allProducts.filter(p => { 
         return p.searchTags && p.searchTags.toLowerCase().includes(tag.toLowerCase()); 
     }));
@@ -514,6 +547,11 @@ let handleSearch = async function(event) {
     
     document.getElementById('product-grid-title').textContent = `Searching...`;
     
+    // --- NEW: PHASE 3 STORE-IN-STORE BRANDING ---
+    const banner = document.getElementById('partner-brand-banner');
+    if (banner) banner.classList.add('hidden');
+    // --------------------------------------------
+
     clearTimeout(searchDebounceTimeout);
     searchDebounceTimeout = setTimeout(async () => {
         try {
@@ -1282,6 +1320,11 @@ handleSearch = async function(event) {
     
     document.getElementById('product-grid-title').textContent = `Searching...`;
     
+    // --- NEW: PHASE 3 STORE-IN-STORE BRANDING ---
+    const banner = document.getElementById('partner-brand-banner');
+    if (banner) banner.classList.add('hidden');
+    // --------------------------------------------
+
     clearTimeout(searchDebounceTimeout);
     searchDebounceTimeout = setTimeout(() => {
         let searchTerms = rawQuery.split(' ');
