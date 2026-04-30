@@ -1,0 +1,21 @@
+{
+  "appId": "com.dailypick.customer",
+  "appName": "DailyPick",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "plugins": {
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    },
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "launchAutoHide": true,
+      "backgroundColor": "#020617",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP"
+    }
+  },
+  "server": {
+    "cleartext": true
+  }
+}
