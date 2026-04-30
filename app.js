@@ -308,7 +308,6 @@ function filterByEnterpriseStore(storeId, storeName) {
     
     renderProducts(filtered);
     
-    // --- NEW: PHASE 3 STORE-IN-STORE BRANDING ---
     const banner = document.getElementById('partner-brand-banner');
     const nameEl = document.getElementById('partner-brand-name');
     const logoEl = document.getElementById('partner-brand-logo');
@@ -328,7 +327,6 @@ function filterByEnterpriseStore(storeId, storeName) {
         }
         banner.classList.remove('hidden');
     }
-    // --------------------------------------------
 
     title.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -505,10 +503,8 @@ function filterCategory(category) {
     document.getElementById('search-input').value = ''; 
     const title = document.getElementById('product-grid-title');
     
-    // --- NEW: PHASE 3 STORE-IN-STORE BRANDING ---
     const banner = document.getElementById('partner-brand-banner');
     if (banner) banner.classList.add('hidden');
-    // --------------------------------------------
 
     if (category === 'All') { 
         title.textContent = 'All Products'; 
@@ -526,10 +522,8 @@ function filterByTag(tag, displayTitle) {
     const title = document.getElementById('product-grid-title'); 
     title.textContent = displayTitle;
     
-    // --- NEW: PHASE 3 STORE-IN-STORE BRANDING ---
     const banner = document.getElementById('partner-brand-banner');
     if (banner) banner.classList.add('hidden');
-    // --------------------------------------------
 
     renderProducts(allProducts.filter(p => { 
         return p.searchTags && p.searchTags.toLowerCase().includes(tag.toLowerCase()); 
@@ -547,10 +541,8 @@ let handleSearch = async function(event) {
     
     document.getElementById('product-grid-title').textContent = `Searching...`;
     
-    // --- NEW: PHASE 3 STORE-IN-STORE BRANDING ---
     const banner = document.getElementById('partner-brand-banner');
     if (banner) banner.classList.add('hidden');
-    // --------------------------------------------
 
     clearTimeout(searchDebounceTimeout);
     searchDebounceTimeout = setTimeout(async () => {
@@ -820,6 +812,10 @@ async function placeOrder() {
     checkoutBtn.textContent = 'Processing...'; 
     checkoutBtn.disabled = true; 
     
+    // --- NEW: PHASE 17 MARKETING ATTRIBUTION INJECTION ---
+    const marketingRef = localStorage.getItem('dailyPick_marketingRef');
+    const finalNotes = marketingRef ? `[MARKETING REF: ${marketingRef}]` : '';
+
     const groupedCart = {};
     cart.forEach(item => {
         const sId = item.storeId || 'default';
@@ -849,14 +845,17 @@ async function placeOrder() {
                 method: 'POST', 
                 headers: { 
                     'Content-Type': 'application/json',
-                    'Idempotency-Key': idempotencyKey 
+                    'Idempotency-Key': idempotencyKey,
+                    // Send the attribution silently so the backend controller can access it if needed
+                    'x-marketing-attribution-id': marketingRef || '' 
                 }, 
                 body: JSON.stringify({
                     customerName: name, 
                     customerPhone: phone, 
                     deliveryAddress: address, 
                     carts: payloadCarts, 
-                    notes: '',
+                    // Ensures the marketing ref appears in the admin packing slips and UI instantly!
+                    notes: finalNotes, 
                     paymentMethod: selectedPaymentMethod,
                     transactionId: transactionId
                 }) 
@@ -1003,7 +1002,6 @@ let checkOrderStatus = async function() {
                 card.appendChild(trackingBtn);
             }
 
-            // --- ADDED: Help / Report Issue button to trigger Native Camera logic ---
             if (order.status === 'Delivered' || order.status === 'Completed') {
                 const issueBtn = document.createElement('button');
                 issueBtn.onclick = () => window.openReportIssueModal(order._id);
@@ -1098,6 +1096,16 @@ function showToast(message) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // --- NEW: PHASE 17 MARKETING ATTRIBUTION CAPTURE ---
+    // Safely reads ?ref= or ?utm_campaign= from the URL and stores it for checkout
+    const urlParams = new URLSearchParams(window.location.search);
+    const ref = urlParams.get('ref') || urlParams.get('utm_campaign') || urlParams.get('source');
+    if (ref) {
+        localStorage.setItem('dailyPick_marketingRef', ref);
+        console.log('Marketing Attribution Captured:', ref);
+    }
+    // --------------------------------------------------
+
     document.getElementById('search-input').addEventListener('input', handleSearch);
     
     document.querySelectorAll('[data-action="filter-cat"]').forEach(el => {
@@ -1320,10 +1328,8 @@ handleSearch = async function(event) {
     
     document.getElementById('product-grid-title').textContent = `Searching...`;
     
-    // --- NEW: PHASE 3 STORE-IN-STORE BRANDING ---
     const banner = document.getElementById('partner-brand-banner');
     if (banner) banner.classList.add('hidden');
-    // --------------------------------------------
 
     clearTimeout(searchDebounceTimeout);
     searchDebounceTimeout = setTimeout(() => {
