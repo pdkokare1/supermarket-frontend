@@ -7,8 +7,6 @@
 const BACKEND_URL = 'https://dailypick-backend-production-05d6.up.railway.app';
 const DELIVERY_FEE = 20;
 
-// --- MULTI-TENANT CONFIGURATION ---
-// Set to FALSE to bypass the legacy single-store restriction and enable the DailyPick Hybrid Cart
 const ENABLE_CART_ISOLATION = false; 
 
 let allProducts = []; 
@@ -19,12 +17,10 @@ let allCategories = [];
 let trackingStreamController = null; 
 let isProcessingOrder = false; 
 
-// GEOLOCATION STATE
 let userLat = null;
 let userLng = null;
 let pendingProductToAdd = null;
 
-// DOM Elements
 const storefront = document.getElementById('storefront'); 
 const skeletonGrid = document.getElementById('skeleton-grid'); 
 const cartRibbon = document.getElementById('cart-ribbon'); 
@@ -52,7 +48,6 @@ const CATEGORY_IMAGES = {
     'Grocery & Kitchen': { emoji: '🌾', color: '#fef3c7' }
 };
 
-// --- EXISTING: FIREBASE AUTHENTICATION CONFIGURATION ---
 const firebaseConfig = {
     apiKey: "YOUR_FIREBASE_API_KEY",
     authDomain: "your-project.firebaseapp.com",
@@ -133,6 +128,11 @@ function verifyOTP() {
         showToast("Login Successful! 🎉");
         closeCustomerLogin();
         updateAuthUI();
+        
+        // Broadcast token to native layer if running as app
+        if (window.Capacitor && window.Capacitor.Plugins.PushNotifications) {
+            window.registerNativePushToken(idToken);
+        }
     }).catch((error) => {
         showToast("Invalid OTP.");
         console.error(error);
@@ -159,8 +159,6 @@ function updateAuthUI() {
         profileIcon.textContent = '👤'; 
     }
 }
-
-// --- EXISTING APP LOGIC ---
 
 function initializeLocationAndFetch() {
     if ("geolocation" in navigator) {
@@ -261,7 +259,6 @@ async function fetchCategories() {
     }
 }
 
-// --- NEW: PHASE 4 STORE-IN-STORE ENTERPRISE INTEGRATION ---
 async function fetchEnterprisePartners() {
     try {
         const res = await storeFetchWithAuth(`${BACKEND_URL}/api/stores?type=ENTERPRISE`);
@@ -295,7 +292,7 @@ function renderEnterpriseCarousel(stores) {
         const btn = document.createElement('button');
         btn.style.cssText = 'padding: 8px 16px; border-radius: 20px; background: #1e293b; color: white; border: none; font-weight: bold; cursor: pointer; white-space: nowrap; flex-shrink: 0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);';
         btn.textContent = `🏪 ${store.name}`;
-        btn.onclick = () => filterByEnterpriseStore(storeId, store.name);
+        btn.onclick = () => filterByEnterpriseStore(store.id, store.name);
         carousel.appendChild(btn);
     });
 }
@@ -313,7 +310,6 @@ function filterByEnterpriseStore(storeId, storeName) {
     title.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// --- NEW: PHASE 2 CROSS-STORE PRICE ENGINE ---
 async function openPriceCompare(sku, productName) {
     if (!userLat || !userLng) {
         showToast("Please allow location access to compare prices nearby.");
@@ -330,7 +326,7 @@ async function openPriceCompare(sku, productName) {
             result.options.slice(0, 3).forEach((opt, idx) => {
                 msg += `${idx === 0 ? '🏆' : '🏪'} ${opt.storeName}: Rs ${opt.bestPriceRs} (Rating: ${opt.rating})\n`;
             });
-            alert(msg); // In production, this would open a beautiful Bottom Sheet Modal
+            alert(msg); 
         } else {
             showToast("No other stores nearby have this item.");
         }
@@ -455,7 +451,6 @@ function renderProducts(productsToRender) {
         actionContainer.style.display = 'flex';
         actionContainer.style.alignItems = 'center';
 
-        // --- NEW: Cross-Store Price Compare Button ---
         if (displayVariant.sku) {
             const compareBtn = document.createElement('button');
             compareBtn.textContent = '🔍';
@@ -551,7 +546,6 @@ function quickAdd(productId) {
         return; 
     }
     
-    // NEW: Save storeName natively to render Omni-Cart UI headers
     cart.push({
         ...p, 
         qty: 1, 
@@ -606,7 +600,6 @@ function updateCardActionUI(productId) {
     const item = cart.find(i => i._id === productId); 
     const qty = item ? item.qty : 0; 
     
-    // Preserve the compare button if it exists
     const compareBtn = container.querySelector('button[title="Compare Prices Nearby"]');
     container.innerHTML = ''; 
     if (compareBtn) container.appendChild(compareBtn);
@@ -663,7 +656,6 @@ let updateGlobalCartUI = function() {
         return; 
     } 
 
-    // --- NEW: PHASE 3 OMNI-CART VISUAL GROUPING ---
     const groupedCart = {};
     cart.forEach(item => {
         const sId = item.storeId || 'default';
@@ -678,13 +670,11 @@ let updateGlobalCartUI = function() {
     Object.keys(groupedCart).forEach(storeId => {
         const group = groupedCart[storeId];
         
-        // Group Header
         const headerDiv = document.createElement('div');
         headerDiv.style.cssText = "background: #f1f5f9; padding: 8px 12px; border-radius: 6px; font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase; margin: 16px 0 8px 0; letter-spacing: 0.5px;";
         headerDiv.textContent = `📦 Fulfilled by ${group.storeName}`;
         fragment.appendChild(headerDiv);
 
-        // Group Items
         group.items.forEach(item => { 
             const row = document.createElement('div'); 
             row.className = 'cart-item-row'; 
@@ -806,16 +796,13 @@ async function placeOrder() {
     const finalTotal = grandSubtotal + totalDeliveryFee; 
     const scheduleTime = selectedDeliveryType === 'Routine' ? document.getElementById('schedule-time').value : 'ASAP'; 
     
-    // --- MODIFIED: PHASE 3 OMNI-CART GATEWAY INVOCATION ---
-    // Instead of looping, we securely package the cart matrix and send it once.
     const payloadCarts = storeIds.map(sId => ({
         storeId: sId === 'default' ? null : sId,
         items: groupedCart[sId].items,
         totalAmount: groupedCart[sId].subtotal + DELIVERY_FEE,
-        deliveryType: selectedDeliveryType // Passing frontend selection to Omni-Cart handler
+        deliveryType: selectedDeliveryType 
     }));
 
-    // OPTIMIZATION: Phase 2 Cryptographically Secure Random UUID for idempotency
     const idempotencyKey = 'OMNI-' + Date.now() + '-' + (window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : Math.random().toString(36).substring(2, 9));
     
     const finalizeBackendOrder = async (transactionId = null) => {
@@ -840,7 +827,6 @@ async function placeOrder() {
             const result = await res.json();
             
             if (result.success) {
-                // Tracking UI can use the Group ID or we just wipe cart and show success
                 localStorage.setItem('dailyPick_activeOrderId', result.splitShipmentGroupId || 'Group_Processing'); 
                 cart = []; 
                 document.getElementById('cust-name').value = ''; 
@@ -874,7 +860,6 @@ async function placeOrder() {
             return;
         }
         
-        // OPTIMIZATION: Phase 2 Dynamic Secure Configuration Fetch
         let razorpayKey = 'rzp_test_dummykey';
         try {
             const configRes = await fetch(`${BACKEND_URL}/api/config/gateway`);
@@ -926,14 +911,11 @@ let checkOrderStatus = async function() {
     trackingContent.appendChild(loading);
     
     try { 
-        // Handles tracking for either a single order ID or an Omni-Cart Group ID natively
         const endpoint = savedOrderId.startsWith('OMNI-') ? `/api/orders?groupId=${savedOrderId}` : `/api/orders/${savedOrderId}`;
         const res = await storeFetchWithAuth(`${BACKEND_URL}${endpoint}`); 
         const result = await res.json(); 
         
         if (result.success) { 
-            // In a real scenario with Omni-Cart, we would loop over `result.data` array.
-            // Assuming legacy fallback here so it doesn't break your existing UI
             const order = Array.isArray(result.data) ? result.data[0] : result.data; 
             const timeString = new Date(order.createdAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); 
             
@@ -1067,7 +1049,6 @@ function showToast(message) {
     setTimeout(() => toast.remove(), 2500); 
 }
 
-// --- DOM Event Bindings ---
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('search-input').addEventListener('input', handleSearch);
     
@@ -1092,7 +1073,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('nav-orders').addEventListener('click', () => switchView('orders'));
     document.getElementById('nav-cats').addEventListener('click', () => window.scrollTo({top: 0, behavior: 'smooth'}));
 
-    // BIND NEW AUTH LOGIC TO UI
     document.querySelector('.profile-icon').addEventListener('click', openCustomerLogin);
     updateAuthUI();
 
@@ -1101,10 +1081,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeLocationAndFetch();
 });
 
-// ============================================================================
-// --- NEW: PHASE 4 OMNI-CART CONSUMER UI ENHANCEMENT ---
-// ============================================================================
-// Safely overwriting updateGlobalCartUI to add dynamic delivery ETAs without deleting legacy logic
 const legacyUpdateGlobalCartUI = updateGlobalCartUI;
 updateGlobalCartUI = function() {
     legacyUpdateGlobalCartUI(); 
@@ -1139,9 +1115,6 @@ updateGlobalCartUI = function() {
     }
 };
 
-// ============================================================================
-// --- NEW: PHASE 6 OMNI-LOYALTY ENGINE (SUPER WALLET) ---
-// ============================================================================
 let customerLoyaltyBalance = 0;
 let isLoyaltyApplied = false;
 
@@ -1206,7 +1179,6 @@ updateGlobalCartUI = function() {
     document.getElementById('cart-total').textContent = `Rs ${finalTotal}`;
 };
 
-// Intercept standard fetch to silently append the loyalty boolean to the checkout JSON payload
 const originalStoreFetchWithAuthPhase6 = storeFetchWithAuth;
 storeFetchWithAuth = async function(url, options = {}) {
     if (url.includes('/api/orders/omni-checkout') && options.body) {
@@ -1219,15 +1191,10 @@ storeFetchWithAuth = async function(url, options = {}) {
     return await originalStoreFetchWithAuthPhase6(url, options);
 };
 
-// ============================================================================
-// --- NEW: PHASE 10 ALGORITHMIC SMART CART UPSELLS ---
-// ============================================================================
 const originalUpdateGlobalCartUIPhase10 = updateGlobalCartUI;
-
 updateGlobalCartUI = function() {
     originalUpdateGlobalCartUIPhase10();
     
-    // Fire async fetch safely outside the main synchronous render thread
     setTimeout(async () => {
         const upsellsContainer = document.getElementById('smart-cart-upsells-container');
         const upsellsList = document.getElementById('smart-cart-upsells-list');
@@ -1250,7 +1217,6 @@ updateGlobalCartUI = function() {
             if (result.success && result.data && result.data.length > 0) {
                 upsellsList.innerHTML = '';
                 
-                // Filter out items that are already inside the user's cart
                 const cartIds = cart.map(i => i._id.toString());
                 const filteredUpsells = result.data.filter(u => !cartIds.includes(u._id.toString())).slice(0, 3);
                 
@@ -1270,7 +1236,6 @@ updateGlobalCartUI = function() {
                         </div>
                     `;
                     
-                    // Add items to allProducts array temporarily so quickAdd can find them
                     if (!allProducts.find(p => p._id === item._id)) {
                         allProducts.push(item);
                     }
@@ -1287,9 +1252,6 @@ updateGlobalCartUI = function() {
     }, 10);
 };
 
-// ============================================================================
-// --- NEW: PHASE 11 $0 IN-MEMORY FUZZY & SYNONYM SEARCH ENGINE ---
-// ============================================================================
 const commonSynonyms = {
     "late night": ["chips", "snack", "coke", "soda", "chocolate", "munchies", "ice cream"],
     "morning": ["milk", "bread", "butter", "eggs", "coffee", "tea"],
@@ -1303,7 +1265,6 @@ const commonSynonyms = {
     "cravings": ["chips", "chocolate", "soda", "snack"]
 };
 
-// Override the global handleSearch function safely before DOM bindings
 handleSearch = async function(event) { 
     const rawQuery = event.target.value.toLowerCase().trim(); 
     if (!rawQuery) { filterCategory('All'); return; } 
@@ -1315,14 +1276,12 @@ handleSearch = async function(event) {
     searchDebounceTimeout = setTimeout(() => {
         let searchTerms = rawQuery.split(' ');
         
-        // Inject synonyms into search terms array
         for (const [key, related] of Object.entries(commonSynonyms)) {
             if (rawQuery.includes(key)) {
                 searchTerms.push(...related);
             }
         }
         
-        // $0 Cost In-Memory Heuristic Search
         const scoredProducts = allProducts.map(p => {
             let score = 0;
             const pName = (p.name || '').toLowerCase();
@@ -1334,7 +1293,6 @@ handleSearch = async function(event) {
                 if (pCat.includes(term)) score += 5;
                 if (pTags.includes(term)) score += 5;
                 
-                // Extremely basic fuzzy matching (ignores last character typo)
                 if (term.length > 3 && pName.includes(term.substring(0, term.length - 1))) score += 2;
             });
             return { product: p, score };
@@ -1347,22 +1305,17 @@ handleSearch = async function(event) {
     }, 300);
 };
 
-// ============================================================================
-// --- NEW: PHASE 11 CUSTOMER RATING & FEEDBACK UI TRIGGERS ---
-// ============================================================================
 const originalCheckOrderStatusPhase11 = checkOrderStatus;
 
 checkOrderStatus = async function() {
     await originalCheckOrderStatusPhase11();
     
-    // Give the DOM a moment to render the tracking content
     setTimeout(() => {
         const savedOrderId = localStorage.getItem('dailyPick_activeOrderId');
         const content = document.getElementById('tracking-content');
         
-        // If the order has reached terminal "Completed" state, prompt for feedback
         if (savedOrderId && content && content.innerHTML.includes('Completed')) {
-            if (localStorage.getItem(`rated_${savedOrderId}`)) return; // Already rated
+            if (localStorage.getItem(`rated_${savedOrderId}`)) return; 
             
             const ratingContainer = document.getElementById('customer-rating-modal');
             if (ratingContainer) {
@@ -1379,7 +1332,6 @@ window.submitOrderRating = async function(score) {
     
     const orderId = modal.getAttribute('data-order-id');
     
-    // Optimistic UI interaction
     modal.innerHTML = '<div style="padding: 24px; text-align: center;"><h3 style="color:#0f172a;">Thank you for your feedback! ❤️</h3><p style="color:#64748B; font-size:14px;">We are constantly improving.</p></div>';
     setTimeout(() => modal.classList.add('hidden'), 2000);
     
@@ -1395,15 +1347,10 @@ window.submitOrderRating = async function(score) {
     }
 };
 
-// ============================================================================
-// --- NEW: PHASE 12 ABANDONED CART RECOVERY ENGINE ---
-// ============================================================================
 document.addEventListener('visibilitychange', () => {
-    // Triggers silently if the user closes or backgrounds the tab
     if (document.visibilityState === 'hidden' && cart && cart.length > 0) {
         const token = localStorage.getItem('dailyPick_customerToken');
         if (token) {
-            // Uses navigator.sendBeacon to ensure the payload is delivered even as the page unloads
             navigator.sendBeacon(`${BACKEND_URL}/api/orders/abandoned-cart`, JSON.stringify({
                 cartSnapshot: cart,
                 timestamp: new Date().toISOString()
@@ -1412,9 +1359,6 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 
-// ============================================================================
-// --- NEW: PHASE 13 CONSUMER LIVE MAP INJECTION ---
-// ============================================================================
 let consumerLiveMap = null;
 let riderMarker = null;
 let consumerTrackingWS = null;
@@ -1427,12 +1371,10 @@ checkOrderStatus = async function() {
         const content = document.getElementById('tracking-content');
         if (!content) return;
         
-        // If the order has dispatched, inject the map
         if (content.innerHTML.includes('Dispatched') && !content.innerHTML.includes('live-rider-map')) {
             const savedOrderId = localStorage.getItem('dailyPick_activeOrderId');
             if(!savedOrderId) return;
 
-            // Dynamically load Leaflet safely so we don't need to alter index.html
             if (typeof L === 'undefined') {
                 const leafletCss = document.createElement('link');
                 leafletCss.rel = 'stylesheet';
@@ -1458,18 +1400,15 @@ function initializeLiveMap(orderId) {
     
     document.getElementById('tracking-content').appendChild(mapContainer);
 
-    // Default to Pimpri-Chinchwad / Pune fallback
     const defaultLat = userLat || 18.6298;
     const defaultLng = userLng || 73.7997;
 
     consumerLiveMap = L.map('live-rider-map').setView([defaultLat, defaultLng], 15);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(consumerLiveMap);
     
-    // Custom Rider Emoji Marker
     const riderIcon = L.divIcon({ html: '<div style="font-size: 24px;">🛵</div>', className: '', iconSize: [24, 24], iconAnchor: [12, 12] });
     riderMarker = L.marker([defaultLat, defaultLng], { icon: riderIcon }).addTo(consumerLiveMap);
 
-    // Connect to the WebSocket we just built
     if (consumerTrackingWS) consumerTrackingWS.close();
     consumerTrackingWS = new WebSocket(`wss://dailypick-backend-production-05d6.up.railway.app/api/ws/track?orderId=${orderId}`);
 
@@ -1479,13 +1418,12 @@ function initializeLiveMap(orderId) {
             if (data.lat && data.lng) {
                 const newLatLng = new L.LatLng(data.lat, data.lng);
                 riderMarker.setLatLng(newLatLng);
-                consumerLiveMap.panTo(newLatLng); // Follow the rider smoothly
+                consumerLiveMap.panTo(newLatLng); 
             }
         } catch(e) {}
     };
 }
 
-// --- SECURE UI EXPORTS (For DOM bindings) ---
 window.quickAdd = quickAdd;
 window.openCustomerLogin = openCustomerLogin;
 window.closeCustomerLogin = closeCustomerLogin;
@@ -1495,9 +1433,6 @@ window.logoutCustomer = logoutCustomer;
 
 })();
 
-// ============================================================================
-// --- NEW: PHASE 10 HYPER-LOCAL DISCOVERY API FETCH & RENDER ---
-// ============================================================================
 (function() {
     const BACKEND_URL = 'https://dailypick-backend-production-05d6.up.railway.app';
     
@@ -1584,4 +1519,47 @@ window.logoutCustomer = logoutCustomer;
             return originalNavGeolocation.call(navigator.geolocation, wrappedSuccess, error, options);
         };
     }
+})();
+
+// ============================================================================
+// --- NEW: PHASE 15 NATIVE CAPACITOR HARDWARE BRIDGE (B2C APP)                   ---
+// ============================================================================
+(function() {
+    // 1. Hardware Push Notification Registration wrapper
+    window.registerNativePushToken = async function(jwtToken) {
+        if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+            try {
+                const { PushNotifications } = window.Capacitor.Plugins;
+                const permStatus = await PushNotifications.requestPermissions();
+                
+                if (permStatus.receive === 'granted') {
+                    await PushNotifications.register();
+                    
+                    PushNotifications.addListener('registration', (token) => {
+                        // Send the iOS/Android device token to Railway to store against the Customer Profile
+                        fetch('https://dailypick-backend-production-05d6.up.railway.app/api/customers/device-token', {
+                            method: 'POST',
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${jwtToken}`
+                            },
+                            body: JSON.stringify({ fcmToken: token.value })
+                        }).catch(()=>{});
+                    });
+
+                    // Wake up the app when the backend says the order is dispatched
+                    PushNotifications.addListener('pushNotificationReceived', (notification) => {
+                        console.log('Push received: ', notification);
+                        if (notification.data && notification.data.orderId) {
+                            localStorage.setItem('dailyPick_activeOrderId', notification.data.orderId);
+                            // Open the tracker view instantly
+                            document.getElementById('nav-orders').click();
+                        }
+                    });
+                }
+            } catch(e) {
+                console.error("Native push bridge failed:", e);
+            }
+        }
+    };
 })();
