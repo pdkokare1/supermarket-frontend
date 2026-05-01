@@ -1777,8 +1777,6 @@ window.logoutCustomer = logoutCustomer;
     const BACKEND_URL = 'https://dailypick-backend-production-05d6.up.railway.app';
     let isJoiningCollective = false;
 
-    // We mock the fetch here since the backend API for collectives might not be fully seeded yet.
-    // In production, this replaces `MOCK_COLLECTIVES` with a fetch to `/api/collectives/active`
     const MOCK_COLLECTIVES = [
         {
             _id: "COL_001",
@@ -1787,7 +1785,7 @@ window.logoutCustomer = logoutCustomer;
             collectiveDiscountRs: 245,
             targetParticipants: 5,
             currentParticipants: 3,
-            expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 14).toISOString(), // 14 hours from now
+            expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 14).toISOString(), 
             dropoffAddress: "Society Main Gate"
         },
         {
@@ -1797,7 +1795,7 @@ window.logoutCustomer = logoutCustomer;
             collectiveDiscountRs: 125,
             targetParticipants: 10,
             currentParticipants: 8,
-            expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 4).toISOString(), // 4 hours from now
+            expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 4).toISOString(), 
             dropoffAddress: "Society Main Gate"
         }
     ];
@@ -1806,16 +1804,13 @@ window.logoutCustomer = logoutCustomer;
         const injectionPoint = document.getElementById('collectives-injection-point');
         if (!injectionPoint) return;
 
-        // BUG FIX: We want EVERYONE (even logged-out guests) to see the viral deals.
-        // If they click 'Join', the joinCollective() function below will prompt them to login.
-
         const container = document.createElement('div');
         
         const header = document.createElement('div');
         header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 0 16px 12px 16px;';
         header.innerHTML = `
             <h2 class="section-title" style="padding: 0; margin: 0;">Neighborhood Deals</h2>
-            <span style="background: #ef4444; color: white; font-size: 10px; font-weight: 800; padding: 4px 8px; border-radius: 12px;">GROUP BUY</span>
+            <span style="background: #fee2e2; color: #ef4444; border: 1px solid #fecaca; font-size: 10px; font-weight: 800; padding: 4px 8px; border-radius: 12px; letter-spacing: 0.5px;">GROUP BUY</span>
         `;
         container.appendChild(header);
 
@@ -1843,7 +1838,7 @@ window.logoutCustomer = logoutCustomer;
                 </div>
                 
                 <button class="collective-btn" onclick="joinCollective('${deal._id}', ${deal.collectiveDiscountRs})">
-                    🔒 Lock in Rs ${deal.collectiveDiscountRs}
+                    🛒 Lock in Rs ${deal.collectiveDiscountRs}
                 </button>
             `;
             carousel.appendChild(card);
@@ -1871,7 +1866,7 @@ window.logoutCustomer = logoutCustomer;
                 const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
                 el.textContent = `${hours}h ${minutes}m`;
             });
-        }, 60000); // Update every minute
+        }, 60000); 
     }
 
     window.joinCollective = async function(collectiveId, amountRs) {
@@ -1887,7 +1882,6 @@ window.logoutCustomer = logoutCustomer;
             return;
         }
 
-        // Simulating the pre-authorization lock
         var options = {
             "key": "rzp_test_dummykey", 
             "amount": amountRs * 100, 
@@ -1895,11 +1889,10 @@ window.logoutCustomer = logoutCustomer;
             "name": "DailyPick Collectives",
             "description": `Group Buy Authorization Lock`,
             "handler": async function (response) {
-                // Here we would call: POST /api/collectives/:id/join
                 alert(`Success! You have joined the Group Buy. You will only be charged when the threshold is hit.`);
                 isJoiningCollective = false;
             },
-            "theme": { "color": "#3b82f6" } // Blue theme for Collectives
+            "theme": { "color": "#16a34a" } 
         };
         var rzp1 = new Razorpay(options);
         rzp1.on('payment.failed', function (response){
@@ -1909,9 +1902,7 @@ window.logoutCustomer = logoutCustomer;
         rzp1.open();
     };
 
-    // Inject into the DOM loading sequence
     document.addEventListener('DOMContentLoaded', () => {
-        // Wait a slight beat to ensure auth token is loaded
         setTimeout(renderNeighborhoodDeals, 500);
     });
 })();
