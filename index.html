@@ -18,18 +18,19 @@
     <link rel="stylesheet" href="styles.css">
 
     <!-- ============================================================================ -->
-    <!-- NEW: PHASE 33 PINDUODUO COLLECTIVES UI STYLES                                -->
+    <!-- NEW: PHASE 33 PINDUODUO COLLECTIVES UI STYLES (LIGHT THEME)                  -->
     <!-- ============================================================================ -->
     <style>
         .collective-carousel { display: flex; gap: 16px; overflow-x: auto; padding: 0 16px 24px 16px; scrollbar-width: none; }
         .collective-carousel::-webkit-scrollbar { display: none; }
         .collective-card { 
             min-width: 280px; 
-            background: linear-gradient(135deg, #1e293b, #0f172a); 
+            background: var(--surface, #ffffff); 
+            border: 1px solid #e2e8f0;
             border-radius: 16px; 
             padding: 16px; 
-            color: white; 
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2); 
+            color: var(--text-main, #0f172a); 
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); 
             flex-shrink: 0; 
             position: relative;
             overflow: hidden;
@@ -37,20 +38,23 @@
         .collective-card::after {
             content: '🔥';
             position: absolute;
-            top: -10px;
+            top: -15px;
             right: -10px;
-            font-size: 60px;
-            opacity: 0.1;
+            font-size: 80px;
+            opacity: 0.04;
+            z-index: 0;
+            pointer-events: none;
         }
-        .collective-badge { background: #ef4444; color: white; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; display: inline-block; margin-bottom: 8px; }
-        .collective-title { font-size: 16px; font-weight: 800; margin: 0 0 4px 0; }
-        .collective-price { font-size: 24px; font-weight: 800; color: #4ade80; margin: 0 0 12px 0; }
-        .collective-price span { font-size: 14px; text-decoration: line-through; color: #94a3b8; font-weight: 600; margin-left: 8px; }
-        .collective-progress-bg { background: #334155; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
-        .collective-progress-bar { background: #3b82f6; height: 100%; border-radius: 4px; transition: width 0.3s ease; }
-        .collective-meta { display: flex; justify-content: space-between; font-size: 11px; color: #94a3b8; font-weight: 600; margin-bottom: 16px; }
-        .collective-btn { width: 100%; background: #3b82f6; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 800; font-size: 14px; cursor: pointer; display: flex; justify-content: center; gap: 8px; align-items: center; }
-        .collective-btn:disabled { background: #334155; color: #94a3b8; cursor: not-allowed; }
+        .collective-badge { background: #fee2e2; color: #ef4444; border: 1px solid #fecaca; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; display: inline-block; margin-bottom: 8px; position: relative; z-index: 1; }
+        .collective-title { font-size: 14px; font-weight: 700; margin: 0 0 6px 0; position: relative; z-index: 1; line-height: 1.3; }
+        .collective-price { font-size: 20px; font-weight: 800; color: var(--primary, #16a34a); margin: 0 0 12px 0; position: relative; z-index: 1; }
+        .collective-price span { font-size: 12px; text-decoration: line-through; color: #94a3b8; font-weight: 600; margin-left: 6px; }
+        .collective-progress-bg { background: #f1f5f9; height: 6px; border-radius: 4px; overflow: hidden; margin-bottom: 8px; position: relative; z-index: 1; }
+        .collective-progress-bar { background: #f97316; height: 100%; border-radius: 4px; transition: width 0.3s ease; }
+        .collective-meta { display: flex; justify-content: space-between; font-size: 11px; color: #64748b; font-weight: 600; margin-bottom: 16px; position: relative; z-index: 1; }
+        .collective-btn { width: 100%; background: var(--primary, #16a34a); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 800; font-size: 14px; cursor: pointer; display: flex; justify-content: center; gap: 8px; align-items: center; position: relative; z-index: 1; box-shadow: 0 4px 10px rgba(22, 163, 74, 0.2); transition: transform 0.1s; }
+        .collective-btn:active { transform: scale(0.98); }
+        .collective-btn:disabled { background: #e2e8f0; color: #94a3b8; cursor: not-allowed; box-shadow: none; }
     </style>
 </head>
 <body>
