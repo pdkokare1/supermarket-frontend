@@ -1769,3 +1769,150 @@ window.logoutCustomer = logoutCustomer;
         }
     };
 })();
+
+// ============================================================================
+// --- NEW: PHASE 33 PINDUODUO PROTOCOL (MICRO-NEIGHBORHOOD GROUP BUYS) ---
+// ============================================================================
+(function() {
+    const BACKEND_URL = 'https://dailypick-backend-production-05d6.up.railway.app';
+    let isJoiningCollective = false;
+
+    // We mock the fetch here since the backend API for collectives might not be fully seeded yet.
+    // In production, this replaces `MOCK_COLLECTIVES` with a fetch to `/api/collectives/active`
+    const MOCK_COLLECTIVES = [
+        {
+            _id: "COL_001",
+            productName: "Aashirvaad Select Premium Sharbati Atta, 5 kg",
+            originalPriceRs: 310,
+            collectiveDiscountRs: 245,
+            targetParticipants: 5,
+            currentParticipants: 3,
+            expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 14).toISOString(), // 14 hours from now
+            dropoffAddress: "Society Main Gate"
+        },
+        {
+            _id: "COL_002",
+            productName: "Maggi 2-Minute Instant Noodles, 12 Pack",
+            originalPriceRs: 168,
+            collectiveDiscountRs: 125,
+            targetParticipants: 10,
+            currentParticipants: 8,
+            expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 4).toISOString(), // 4 hours from now
+            dropoffAddress: "Society Main Gate"
+        }
+    ];
+
+    function renderNeighborhoodDeals() {
+        const injectionPoint = document.getElementById('collectives-injection-point');
+        if (!injectionPoint) return;
+
+        // Ensure user is authenticated to see their neighborhood deals
+        const token = localStorage.getItem('dailyPick_customerToken');
+        if (!token) return;
+
+        const container = document.createElement('div');
+        
+        const header = document.createElement('div');
+        header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 0 16px 12px 16px;';
+        header.innerHTML = `
+            <h2 class="section-title" style="padding: 0; margin: 0;">Neighborhood Deals</h2>
+            <span style="background: #ef4444; color: white; font-size: 10px; font-weight: 800; padding: 4px 8px; border-radius: 12px;">GROUP BUY</span>
+        `;
+        container.appendChild(header);
+
+        const carousel = document.createElement('div');
+        carousel.className = 'collective-carousel';
+
+        MOCK_COLLECTIVES.forEach(deal => {
+            const pct = (deal.currentParticipants / deal.targetParticipants) * 100;
+            const remaining = deal.targetParticipants - deal.currentParticipants;
+            
+            const card = document.createElement('div');
+            card.className = 'collective-card';
+            
+            card.innerHTML = `
+                <span class="collective-badge">Ends in <span class="countdown-timer" data-expires="${deal.expiresAt}">--:--</span></span>
+                <h3 class="collective-title">${deal.productName}</h3>
+                <p class="collective-price">Rs ${deal.collectiveDiscountRs} <span>Rs ${deal.originalPriceRs}</span></p>
+                
+                <div class="collective-progress-bg">
+                    <div class="collective-progress-bar" style="width: ${pct}%"></div>
+                </div>
+                <div class="collective-meta">
+                    <span>${deal.currentParticipants} joined</span>
+                    <span>Need ${remaining} more</span>
+                </div>
+                
+                <button class="collective-btn" onclick="joinCollective('${deal._id}', ${deal.collectiveDiscountRs})">
+                    🔒 Lock in Rs ${deal.collectiveDiscountRs}
+                </button>
+            `;
+            carousel.appendChild(card);
+        });
+
+        container.appendChild(carousel);
+        injectionPoint.appendChild(container);
+
+        startCountdowns();
+    }
+
+    function startCountdowns() {
+        setInterval(() => {
+            document.querySelectorAll('.countdown-timer').forEach(el => {
+                const expiresAt = new Date(el.getAttribute('data-expires')).getTime();
+                const now = new Date().getTime();
+                const distance = expiresAt - now;
+
+                if (distance < 0) {
+                    el.textContent = "EXPIRED";
+                    return;
+                }
+
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                el.textContent = `${hours}h ${minutes}m`;
+            });
+        }, 60000); // Update every minute
+    }
+
+    window.joinCollective = async function(collectiveId, amountRs) {
+        if (isJoiningCollective) return;
+        const token = localStorage.getItem('dailyPick_customerToken');
+        if (!token) return window.openCustomerLogin();
+
+        isJoiningCollective = true;
+
+        if (typeof Razorpay === 'undefined') {
+            alert("Payment gateway loading. Try again.");
+            isJoiningCollective = false;
+            return;
+        }
+
+        // Simulating the pre-authorization lock
+        var options = {
+            "key": "rzp_test_dummykey", 
+            "amount": amountRs * 100, 
+            "currency": "INR",
+            "name": "DailyPick Collectives",
+            "description": `Group Buy Authorization Lock`,
+            "handler": async function (response) {
+                // Here we would call: POST /api/collectives/:id/join
+                alert(`Success! You have joined the Group Buy. You will only be charged when the threshold is hit.`);
+                isJoiningCollective = false;
+            },
+            "theme": { "color": "#3b82f6" } // Blue theme for Collectives
+        };
+        var rzp1 = new Razorpay(options);
+        rzp1.on('payment.failed', function (response){
+            alert('Authorization Failed');
+            isJoiningCollective = false;
+        });
+        rzp1.open();
+    };
+
+    // Inject into the DOM loading sequence
+    document.addEventListener('DOMContentLoaded', () => {
+        // Wait a slight beat to ensure auth token is loaded
+        setTimeout(renderNeighborhoodDeals, 500);
+    });
+})();
