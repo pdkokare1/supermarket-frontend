@@ -16,6 +16,42 @@
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 
     <link rel="stylesheet" href="styles.css">
+
+    <!-- ============================================================================ -->
+    <!-- NEW: PHASE 33 PINDUODUO COLLECTIVES UI STYLES                                -->
+    <!-- ============================================================================ -->
+    <style>
+        .collective-carousel { display: flex; gap: 16px; overflow-x: auto; padding: 0 16px 24px 16px; scrollbar-width: none; }
+        .collective-carousel::-webkit-scrollbar { display: none; }
+        .collective-card { 
+            min-width: 280px; 
+            background: linear-gradient(135deg, #1e293b, #0f172a); 
+            border-radius: 16px; 
+            padding: 16px; 
+            color: white; 
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2); 
+            flex-shrink: 0; 
+            position: relative;
+            overflow: hidden;
+        }
+        .collective-card::after {
+            content: '🔥';
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            font-size: 60px;
+            opacity: 0.1;
+        }
+        .collective-badge { background: #ef4444; color: white; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; display: inline-block; margin-bottom: 8px; }
+        .collective-title { font-size: 16px; font-weight: 800; margin: 0 0 4px 0; }
+        .collective-price { font-size: 24px; font-weight: 800; color: #4ade80; margin: 0 0 12px 0; }
+        .collective-price span { font-size: 14px; text-decoration: line-through; color: #94a3b8; font-weight: 600; margin-left: 8px; }
+        .collective-progress-bg { background: #334155; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
+        .collective-progress-bar { background: #3b82f6; height: 100%; border-radius: 4px; transition: width 0.3s ease; }
+        .collective-meta { display: flex; justify-content: space-between; font-size: 11px; color: #94a3b8; font-weight: 600; margin-bottom: 16px; }
+        .collective-btn { width: 100%; background: #3b82f6; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 800; font-size: 14px; cursor: pointer; display: flex; justify-content: center; gap: 8px; align-items: center; }
+        .collective-btn:disabled { background: #334155; color: #94a3b8; cursor: not-allowed; }
+    </style>
 </head>
 <body>
     <header class="app-header">
@@ -69,6 +105,9 @@
                 <p style="margin-top: auto; font-size: 11px;">✦ Refreshing ✦</p>
             </div>
         </section>
+
+        <!-- --- NEW: PHASE 33 PINDUODUO INJECTION ANCHOR --- -->
+        <div id="collectives-injection-point"></div>
 
         <section class="category-section">
             <h2 class="section-title">Shop by Category</h2>
