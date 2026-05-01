@@ -1806,9 +1806,8 @@ window.logoutCustomer = logoutCustomer;
         const injectionPoint = document.getElementById('collectives-injection-point');
         if (!injectionPoint) return;
 
-        // Ensure user is authenticated to see their neighborhood deals
-        const token = localStorage.getItem('dailyPick_customerToken');
-        if (!token) return;
+        // BUG FIX: We want EVERYONE (even logged-out guests) to see the viral deals.
+        // If they click 'Join', the joinCollective() function below will prompt them to login.
 
         const container = document.createElement('div');
         
