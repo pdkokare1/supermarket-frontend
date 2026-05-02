@@ -21,7 +21,6 @@ let userLat = null;
 let userLng = null;
 let pendingProductToAdd = null;
 
-// DOM Anchors
 const storefront = document.getElementById('storefront'); 
 const skeletonGrid = document.getElementById('skeleton-grid'); 
 const cartRibbon = document.getElementById('cart-ribbon'); 
@@ -29,14 +28,6 @@ const cartView = document.getElementById('cart-view');
 const cartItemsContainer = document.getElementById('cart-items-container'); 
 const toastContainer = document.getElementById('toast-container'); 
 const trackingContent = document.getElementById('tracking-content');
-
-// Dynamic Shelf Anchors (Phase 34 UI)
-const megaDealsSection = document.getElementById('mega-deals-section');
-const megaDealsShelf = document.getElementById('mega-deals-shelf');
-const trendingSection = document.getElementById('trending-section');
-const trendingShelf = document.getElementById('trending-shelf');
-const categorySectionContainer = document.getElementById('category-section-container');
-const collectivesPoint = document.getElementById('collectives-injection-point');
 
 const views = { 
     shop: document.getElementById('shop-view'), 
@@ -48,15 +39,13 @@ const navBtns = {
     orders: document.getElementById('nav-orders') 
 };
 
-// --- NEW: PHASE 34 RICH CATEGORY STYLING (Zepto Mimic) ---
 const CATEGORY_IMAGES = {
-    'Dairy & Breakfast': { emoji: '🥛', color: '#ecfdf5', sub: 'UP TO 15% OFF' }, 
-    'Snacks & Munchies': { emoji: '🍿', color: '#fff7ed', sub: 'STARTS AT ₹19' }, 
-    'Cold Drinks & Juices': { emoji: '🥤', color: '#eff6ff', sub: 'UP TO 50% OFF' }, 
-    'Personal Care': { emoji: '🧴', color: '#fdf4ff', sub: 'UP TO 85% OFF' }, 
-    'Cleaning Essentials': { emoji: '🧽', color: '#f8fafc', sub: 'UP TO 80% OFF' }, 
-    'Grocery & Kitchen': { emoji: '🌾', color: '#fefce8', sub: 'MEGA PACKS' }, 
-    'Default': { emoji: '🛍️', color: '#f1f5f9', sub: 'EXPLORE' }
+    'Dairy & Breakfast': { emoji: '🥛', color: '#e0f2fe' },
+    'Snacks & Munchies': { emoji: '🍿', color: '#ffedd5' },
+    'Cold Drinks & Juices': { emoji: '🥤', color: '#dcfce7' },
+    'Personal Care': { emoji: '🧴', color: '#fce7f3' },
+    'Cleaning Essentials': { emoji: '🧽', color: '#f3e8ff' },
+    'Grocery & Kitchen': { emoji: '🌾', color: '#fef3c7' }
 };
 
 const firebaseConfig = {
@@ -164,7 +153,7 @@ function updateAuthUI() {
     const token = localStorage.getItem('dailyPick_customerToken');
     const profileIcon = document.querySelector('.profile-icon');
     if (token) {
-        profileIcon.innerHTML = '<span style="color:#16a34a;">🟢</span>'; 
+        profileIcon.textContent = '🟢'; 
     } else {
         profileIcon.textContent = '👤'; 
     }
@@ -176,7 +165,7 @@ function initializeLocationAndFetch() {
             (position) => {
                 userLat = position.coords.latitude;
                 userLng = position.coords.longitude;
-                document.querySelector('.delivery-location').innerHTML = '📍 Nearby Available ▼';
+                document.querySelector('.delivery-location').textContent = '📍 Near You ▼';
                 fetchProducts(); 
             },
             (error) => {
@@ -245,17 +234,21 @@ async function fetchCategories() {
             
             const fragment = document.createDocumentFragment();
             allCategories.forEach(cat => {
-                const visual = CATEGORY_IMAGES[cat.name] || CATEGORY_IMAGES['Default'];
+                const visual = CATEGORY_IMAGES[cat.name] || { emoji: '🛍️', color: '#f1f5f9' };
                 const card = document.createElement('div'); 
-                card.className = 'rich-cat-card';
-                card.style.backgroundColor = visual.color;
+                card.className = 'category-card';
                 card.addEventListener('click', () => filterCategory(cat.name));
                 
-                card.innerHTML = `
-                    <div class="rich-cat-title">${cat.name}</div>
-                    <div class="rich-cat-discount">${visual.sub}</div>
-                    <div class="rich-cat-img">${visual.emoji}</div>
-                `;
+                const imgWrapper = document.createElement('div');
+                imgWrapper.className = 'category-img-wrapper';
+                imgWrapper.style.backgroundColor = visual.color;
+                imgWrapper.textContent = visual.emoji;
+                
+                const title = document.createElement('p');
+                title.textContent = cat.name;
+                
+                card.appendChild(imgWrapper);
+                card.appendChild(title);
                 fragment.appendChild(card);
             });
             grid.appendChild(fragment);
@@ -265,10 +258,109 @@ async function fetchCategories() {
     }
 }
 
+async function fetchEnterprisePartners() {
+    try {
+        const res = await storeFetchWithAuth(`${BACKEND_URL}/api/stores?type=ENTERPRISE`);
+        const result = await res.json();
+        if (result.success && result.data && result.data.length > 0) {
+            renderEnterpriseCarousel(result.data);
+        }
+    } catch(e) {
+        console.warn("Could not load enterprise partners for Store-in-Store UI", e);
+    }
+}
+
+function renderEnterpriseCarousel(stores) {
+    let carousel = document.getElementById('enterprise-carousel');
+    if (!carousel) {
+        carousel = document.createElement('div');
+        carousel.id = 'enterprise-carousel';
+        carousel.className = 'enterprise-carousel';
+        carousel.style.cssText = 'display: flex; gap: 12px; overflow-x: auto; padding: 10px 0; margin-bottom: 20px; scrollbar-width: none;';
+        storefront.parentNode.insertBefore(carousel, storefront);
+    }
+    carousel.innerHTML = '';
+    
+    const allBtn = document.createElement('button');
+    allBtn.style.cssText = 'padding: 8px 16px; border-radius: 20px; background: #e2e8f0; color: #334155; border: none; font-weight: bold; cursor: pointer; white-space: nowrap; flex-shrink: 0;';
+    allBtn.textContent = `🌐 All Stores`;
+    allBtn.onclick = () => filterCategory('All');
+    carousel.appendChild(allBtn);
+
+    stores.forEach(store => {
+        const btn = document.createElement('button');
+        btn.style.cssText = 'padding: 8px 16px; border-radius: 20px; background: #1e293b; color: white; border: none; font-weight: bold; cursor: pointer; white-space: nowrap; flex-shrink: 0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);';
+        btn.textContent = `🏪 ${store.name}`;
+        btn.onclick = () => filterByEnterpriseStore(store.id, store.name);
+        carousel.appendChild(btn);
+    });
+}
+
+function filterByEnterpriseStore(storeId, storeName) {
+    document.getElementById('search-input').value = '';
+    const title = document.getElementById('product-grid-title');
+    title.textContent = `Store-in-Store: ${storeName}`;
+    
+    const filtered = allProducts.filter(p => {
+        return p.variants && p.variants.some(v => v.storeId === storeId);
+    });
+    
+    renderProducts(filtered);
+    
+    const banner = document.getElementById('partner-brand-banner');
+    const nameEl = document.getElementById('partner-brand-name');
+    const logoEl = document.getElementById('partner-brand-logo');
+    
+    if (banner && nameEl && logoEl) {
+        nameEl.textContent = storeName;
+        logoEl.textContent = storeName.charAt(0).toUpperCase();
+        
+        if (storeName.toLowerCase().includes('croma')) {
+            banner.style.background = 'linear-gradient(135deg, #0f766e, #0f172a)'; 
+        } else if (storeName.toLowerCase().includes('reliance')) {
+            banner.style.background = 'linear-gradient(135deg, #b91c1c, #0f172a)'; 
+        } else if (storeName.toLowerCase().includes('dmart') || storeName.toLowerCase().includes('d mart')) {
+            banner.style.background = 'linear-gradient(135deg, #15803d, #0f172a)'; 
+        } else {
+            banner.style.background = 'linear-gradient(135deg, #1e293b, #0f172a)'; 
+        }
+        banner.classList.remove('hidden');
+    }
+
+    title.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function openPriceCompare(sku, productName) {
+    if (!userLat || !userLng) {
+        showToast("Please allow location access to compare prices nearby.");
+        return;
+    }
+    
+    showToast("Scanning nearby stores...");
+    try {
+        const res = await storeFetchWithAuth(`${BACKEND_URL}/api/marketplace/compare?sku=${sku}&lat=${userLat}&lng=${userLng}`);
+        const result = await res.json();
+        
+        if (result.success && result.options.length > 0) {
+            let msg = `Best Prices for ${productName}:\n\n`;
+            result.options.slice(0, 3).forEach((opt, idx) => {
+                msg += `${idx === 0 ? '🏆' : '🏪'} ${opt.storeName}: Rs ${opt.bestPriceRs} (Rating: ${opt.rating})\n`;
+            });
+            alert(msg); 
+        } else {
+            showToast("No other stores nearby have this item.");
+        }
+    } catch (e) {
+        showToast("Price Engine unavailable.");
+    }
+}
+
 async function fetchProducts() { 
     try { 
         let url = `${BACKEND_URL}/api/products`;
-        if (userLat && userLng) url += `?lat=${userLat}&lng=${userLng}`;
+        if (userLat && userLng) {
+            url += `?lat=${userLat}&lng=${userLng}`;
+        }
 
         const res = await storeFetchWithAuth(url); 
         const result = await res.json(); 
@@ -277,8 +369,7 @@ async function fetchProducts() {
             allProducts = result.data; 
             skeletonGrid.classList.add('hidden'); 
             storefront.classList.remove('hidden'); 
-            
-            buildHomeUI(allProducts);
+            renderProducts(allProducts); 
         } 
     } catch(e) { 
         skeletonGrid.innerHTML = '';
@@ -289,159 +380,134 @@ async function fetchProducts() {
     } 
 }
 
-function createProductCardNode(product, isHorizontalShelf = false) {
-    const card = document.createElement('div'); 
-    card.className = 'product-card'; 
-    if (isHorizontalShelf) {
-        card.style.minWidth = '150px';
-        card.style.maxWidth = '150px';
-        card.style.scrollSnapAlign = 'start';
-    }
-    
-    const displayVariant = (product.variants && product.variants.length > 0) ? product.variants[0] : { price: 0, weightOrVolume: 'N/A', stock: 0, lowStockThreshold: 5, sku: null };
-
-    const infoBlock = document.createElement('div');
-    const imgContainer = document.createElement('div');
-    imgContainer.className = 'product-image';
-    
-    const threshold = displayVariant.lowStockThreshold || 5;
-    if (displayVariant.stock > 0 && displayVariant.stock <= threshold) {
-        const badge = document.createElement('div');
-        badge.className = 'fomo-badge';
-        badge.textContent = `🔥 Only ${displayVariant.stock} left`;
-        imgContainer.appendChild(badge);
-    }
-
-    if (isHorizontalShelf && Math.random() > 0.5) {
-        const dBadge = document.createElement('div');
-        dBadge.className = 'discount-tag';
-        dBadge.textContent = '₹' + Math.floor(Math.random() * 50 + 10) + ' OFF';
-        imgContainer.appendChild(dBadge);
-    }
-
-    const optimizedImg = optimizeCloudinaryUrl(product.imageUrl, 400);
-    if (product.imageUrl) {
-        const img = document.createElement('img');
-        img.src = optimizedImg;
-        img.style.cssText = 'width:100%; height:100%; object-fit:contain; padding:10px;';
-        img.alt = product.name;
-        imgContainer.appendChild(img);
-    } else {
-        imgContainer.innerHTML = '<div style="font-size:44px;">📦</div>';
-    }
-
-    const textInfo = document.createElement('div');
-    textInfo.className = 'product-info';
-    
-    const title = document.createElement('h3');
-    title.textContent = product.name;
-    
-    const weight = document.createElement('p');
-    weight.className = 'product-weight';
-    weight.textContent = displayVariant.weightOrVolume;
-    
-    textInfo.appendChild(title);
-    textInfo.appendChild(weight);
-    
-    infoBlock.appendChild(imgContainer);
-    infoBlock.appendChild(textInfo);
-
-    const priceRow = document.createElement('div');
-    priceRow.className = 'price-action-row';
-    
-    const priceBlock = document.createElement('div');
-    priceBlock.className = 'price-block';
-    
-    const priceDiv = document.createElement('div');
-    priceDiv.className = 'product-price';
-    priceDiv.textContent = `₹${displayVariant.price}`; 
-    
-    priceBlock.appendChild(priceDiv);
-    
-    if (isHorizontalShelf) {
-        const mrpDiv = document.createElement('div');
-        mrpDiv.className = 'product-mrp';
-        mrpDiv.textContent = `₹${displayVariant.price + Math.floor(Math.random() * 30 + 10)}`;
-        priceBlock.appendChild(mrpDiv);
-    }
-
-    const actionContainer = document.createElement('div');
-    actionContainer.className = 'action-container';
-    actionContainer.id = `action-container-${product._id}-${Math.random().toString(36).substr(2, 5)}`; 
-    
-    priceRow.appendChild(priceBlock);
-    priceRow.appendChild(actionContainer);
-    
-    card.appendChild(infoBlock);
-    card.appendChild(priceRow);
-
-    setTimeout(() => {
-        updateSpecificCardActionUI(product._id, actionContainer);
-    }, 0);
-
-    return card;
-}
-
-function buildHomeUI(products) {
-    document.getElementById('product-grid-title').textContent = 'All Products';
-    document.getElementById('btn-view-all').classList.add('hidden');
-    categorySectionContainer.classList.remove('hidden');
-    collectivesPoint.classList.remove('hidden');
-
-    if (products.length < 8) {
-        megaDealsSection.classList.add('hidden');
-        trendingSection.classList.add('hidden');
-        renderFlatGrid(products);
-        return;
-    }
-
-    megaDealsSection.classList.remove('hidden');
-    trendingSection.classList.remove('hidden');
-    
-    megaDealsShelf.innerHTML = '';
-    trendingShelf.innerHTML = '';
-
-    const deals = products.slice(0, 5);
-    const trending = products.slice(5, 10);
-    const rest = products.slice(10);
-
-    deals.forEach(p => megaDealsShelf.appendChild(createProductCardNode(p, true)));
-    trending.forEach(p => trendingShelf.appendChild(createProductCardNode(p, true)));
-    
-    renderFlatGrid(rest);
-}
-
-function renderFlatGrid(productsToRender) {
+function renderProducts(productsToRender) { 
     storefront.innerHTML = ''; 
     
     if (productsToRender.length === 0) { 
-        storefront.innerHTML = '<p style="grid-column:span 2;text-align:center;color:#94A3B8;margin-top:40px;">No products found.</p>';
+        const emptyState = document.createElement('p');
+        emptyState.style.cssText = "grid-column:span 2;text-align:center;color:#94A3B8;margin-top:40px;";
+        emptyState.textContent = "No products found in your area.";
+        storefront.appendChild(emptyState); 
         return; 
     } 
     
     const fragment = document.createDocumentFragment();
-    productsToRender.forEach(product => { 
-        fragment.appendChild(createProductCardNode(product, false));
-    }); 
-    storefront.appendChild(fragment);
-}
 
-function renderProducts(productsToRender) { 
-    megaDealsSection.classList.add('hidden');
-    trendingSection.classList.add('hidden');
-    categorySectionContainer.classList.add('hidden');
-    collectivesPoint.classList.add('hidden');
+    productsToRender.forEach(product => { 
+        const card = document.createElement('div'); 
+        card.className = 'product-card'; 
+        
+        const displayVariant = (product.variants && product.variants.length > 0) 
+            ? product.variants[0] 
+            : { price: 0, weightOrVolume: 'N/A', stock: 0, lowStockThreshold: 5, sku: null };
+
+        const infoBlock = document.createElement('div');
+        
+        const imgContainer = document.createElement('div');
+        imgContainer.className = 'product-image';
+        imgContainer.style.cssText = 'padding:0; overflow:hidden; position:relative;';
+        
+        const threshold = displayVariant.lowStockThreshold || 5;
+        if (displayVariant.stock > 0 && displayVariant.stock <= threshold) {
+            const badge = document.createElement('div');
+            badge.className = 'fomo-badge';
+            badge.textContent = `🔥 Only ${displayVariant.stock} left!`;
+            imgContainer.appendChild(badge);
+        }
+
+        const optimizedImg = optimizeCloudinaryUrl(product.imageUrl, 400);
+        if (product.imageUrl) {
+            const img = document.createElement('img');
+            img.src = optimizedImg;
+            img.style.cssText = 'width:100%; height:100%; object-fit:contain; border-radius:8px;';
+            img.alt = product.name;
+            imgContainer.appendChild(img);
+        } else {
+            const placeholder = document.createElement('div');
+            placeholder.style.cssText = 'font-size:44px; display:flex; align-items:center; justify-content:center; width:100%; height:100%;';
+            placeholder.textContent = '📦';
+            imgContainer.appendChild(placeholder);
+        }
+
+        const textInfo = document.createElement('div');
+        textInfo.className = 'product-info';
+        
+        const title = document.createElement('h3');
+        title.textContent = product.name;
+        
+        const weight = document.createElement('p');
+        weight.className = 'product-weight';
+        weight.textContent = displayVariant.weightOrVolume;
+
+        const storeName = displayVariant.storeName || 'Local Partner';
+        const rating = displayVariant.storeRating ? `⭐ ${displayVariant.storeRating}` : '⭐ 4.5';
+        
+        const trustBadge = document.createElement('div');
+        trustBadge.style.cssText = 'font-size: 11px; color: #64748b; margin-top: 4px; font-weight: 600;';
+        if (displayVariant.storeType === 'ENTERPRISE') {
+            trustBadge.style.color = '#3b82f6'; 
+            trustBadge.textContent = `🚀 Fulfilled by ${storeName} • ${rating}`;
+        } else {
+            trustBadge.textContent = `🏪 ${storeName} • ${rating}`;
+        }
+        
+        textInfo.appendChild(title);
+        textInfo.appendChild(weight);
+        textInfo.appendChild(trustBadge);
+        
+        infoBlock.appendChild(imgContainer);
+        infoBlock.appendChild(textInfo);
+
+        const priceRow = document.createElement('div');
+        priceRow.className = 'price-action-row';
+        
+        const priceDiv = document.createElement('div');
+        priceDiv.className = 'product-price';
+        priceDiv.textContent = `Rs ${displayVariant.price}`;
+        
+        const actionContainer = document.createElement('div');
+        actionContainer.className = 'action-container';
+        actionContainer.id = `action-container-${product._id}`;
+        actionContainer.style.display = 'flex';
+        actionContainer.style.alignItems = 'center';
+
+        if (displayVariant.sku) {
+            const compareBtn = document.createElement('button');
+            compareBtn.textContent = '🔍';
+            compareBtn.style.cssText = 'background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; padding: 6px; border-radius: 4px; font-size: 14px; cursor: pointer; margin-right: 6px;';
+            compareBtn.title = 'Compare Prices Nearby';
+            compareBtn.onclick = (e) => { 
+                e.stopPropagation(); 
+                openPriceCompare(displayVariant.sku, product.name); 
+            };
+            actionContainer.appendChild(compareBtn);
+        }
+        
+        priceRow.appendChild(priceDiv);
+        priceRow.appendChild(actionContainer);
+        
+        card.appendChild(infoBlock);
+        card.appendChild(priceRow);
+        fragment.appendChild(card);
+    }); 
     
-    renderFlatGrid(productsToRender);
+    storefront.appendChild(fragment);
+    
+    productsToRender.forEach(product => {
+        updateCardActionUI(product._id); 
+    });
 }
 
 function filterCategory(category) { 
     document.getElementById('search-input').value = ''; 
     const title = document.getElementById('product-grid-title');
-    document.getElementById('btn-view-all').classList.remove('hidden');
+    
+    const banner = document.getElementById('partner-brand-banner');
+    if (banner) banner.classList.add('hidden');
 
     if (category === 'All') { 
-        buildHomeUI(allProducts); 
+        title.textContent = 'All Products'; 
+        renderProducts(allProducts); 
     } else { 
         title.textContent = category; 
         renderProducts(allProducts.filter(p => p.category === category)); 
@@ -454,65 +520,45 @@ function filterByTag(tag, displayTitle) {
     document.getElementById('search-input').value = ''; 
     const title = document.getElementById('product-grid-title'); 
     title.textContent = displayTitle;
-    document.getElementById('btn-view-all').classList.remove('hidden');
+    
+    const banner = document.getElementById('partner-brand-banner');
+    if (banner) banner.classList.add('hidden');
 
-    renderProducts(allProducts.filter(p => p.searchTags && p.searchTags.toLowerCase().includes(tag.toLowerCase())));
+    renderProducts(allProducts.filter(p => { 
+        return p.searchTags && p.searchTags.toLowerCase().includes(tag.toLowerCase()); 
+    }));
+    
     title.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 let searchDebounceTimeout = null;
-const commonSynonyms = {
-    "late night": ["chips", "snack", "coke", "soda", "chocolate", "munchies", "ice cream"],
-    "morning": ["milk", "bread", "butter", "eggs", "coffee", "tea"],
-    "cleaning": ["soap", "detergent", "broom", "mop", "phenyl", "harpic"],
-    "party": ["cold drink", "soda", "chips", "namkeen", "disposable", "cups"],
-    "sick": ["medicine", "soup", "honey", "tea", "vicks", "crocin"],
-    "mlik": ["milk"], "bred": ["bread"], "shmpoo": ["shampoo"], "sope": ["soap"]
-};
 
 let handleSearch = async function(event) { 
-    const rawQuery = event.target.value.toLowerCase().trim(); 
-    if (!rawQuery) { filterCategory('All'); return; } 
-    if (rawQuery.length < 2) return; 
+    const query = event.target.value.toLowerCase().trim(); 
+    if (!query) { filterCategory('All'); return; } 
+    if (query.length < 2) return; 
     
     document.getElementById('product-grid-title').textContent = `Searching...`;
-    document.getElementById('btn-view-all').classList.remove('hidden');
+    
+    const banner = document.getElementById('partner-brand-banner');
+    if (banner) banner.classList.add('hidden');
 
     clearTimeout(searchDebounceTimeout);
     searchDebounceTimeout = setTimeout(async () => {
-        let searchTerms = rawQuery.split(' ');
-        for (const [key, related] of Object.entries(commonSynonyms)) {
-            if (rawQuery.includes(key)) searchTerms.push(...related);
-        }
-        
-        const scoredProducts = allProducts.map(p => {
-            let score = 0;
-            const pName = (p.name || '').toLowerCase();
-            const pCat = (p.category || '').toLowerCase();
-            const pTags = (p.searchTags || '').toLowerCase();
-            
-            searchTerms.forEach(term => {
-                if (pName.includes(term)) score += 10;
-                if (pCat.includes(term)) score += 5;
-                if (pTags.includes(term)) score += 5;
-            });
-            return { product: p, score };
-        }).filter(item => item.score > 0).sort((a, b) => b.score - a.score).map(item => item.product);
+        try {
+            let url = `${BACKEND_URL}/api/products/autocomplete?q=${encodeURIComponent(query)}`;
+            if (userLat && userLng) url += `&lat=${userLat}&lng=${userLng}`;
 
-        if (scoredProducts.length > 0) {
-            document.getElementById('product-grid-title').textContent = `Search Results`;
-            renderProducts(scoredProducts);
-        } else {
-            try {
-                let url = `${BACKEND_URL}/api/products/autocomplete?q=${encodeURIComponent(rawQuery)}`;
-                if (userLat && userLng) url += `&lat=${userLat}&lng=${userLng}`;
-                const res = await storeFetchWithAuth(url);
-                const result = await res.json();
-                if (result.success) {
-                    document.getElementById('product-grid-title').textContent = `Search Results`;
-                    renderProducts(result.data);
-                }
-            } catch (e) {}
+            const res = await storeFetchWithAuth(url);
+            const result = await res.json();
+            
+            if (result.success) {
+                document.getElementById('product-grid-title').textContent = `Search Results`;
+                renderProducts(result.data);
+            }
+        } catch (e) {
+            console.error("Autocomplete search failed", e);
+            document.getElementById('product-grid-title').textContent = `Error searching`;
         }
     }, 300);
 }
@@ -529,8 +575,14 @@ function quickAdd(productId) {
         return; 
     }
     
-    cart.push({ ...p, qty: 1, currentPrice: displayVariant.price, storeId: displayVariant.storeId, storeName: displayVariant.storeName || 'DailyPick Platform' }); 
-    updateAllActionUIs(productId); 
+    cart.push({
+        ...p, 
+        qty: 1, 
+        currentPrice: displayVariant.price, 
+        storeId: displayVariant.storeId,
+        storeName: displayVariant.storeName || 'DailyPick Platform'
+    }); 
+    updateCardActionUI(productId); 
     updateGlobalCartUI(); 
 }
 
@@ -542,13 +594,19 @@ window.cancelClearCart = function() {
 window.confirmClearCart = function() {
     const oldCartIds = cart.map(i => i._id);
     cart = []; 
-    oldCartIds.forEach(id => updateAllActionUIs(id)); 
+    oldCartIds.forEach(id => updateCardActionUI(id)); 
 
     document.getElementById('isolation-modal').classList.add('hidden');
     
     if (pendingProductToAdd) {
-        cart.push({ ...pendingProductToAdd, qty: 1, currentPrice: pendingProductToAdd.targetVariant.price, storeId: pendingProductToAdd.targetVariant.storeId, storeName: pendingProductToAdd.targetVariant.storeName || 'DailyPick Platform' }); 
-        updateAllActionUIs(pendingProductToAdd._id);
+        cart.push({
+            ...pendingProductToAdd, 
+            qty: 1, 
+            currentPrice: pendingProductToAdd.targetVariant.price, 
+            storeId: pendingProductToAdd.targetVariant.storeId,
+            storeName: pendingProductToAdd.targetVariant.storeName || 'DailyPick Platform'
+        }); 
+        updateCardActionUI(pendingProductToAdd._id);
         updateGlobalCartUI();
         pendingProductToAdd = null;
     }
@@ -560,23 +618,20 @@ function adjustQty(productId, change) {
         cart[idx].qty += change; 
         if (cart[idx].qty <= 0) cart.splice(idx, 1); 
     } 
-    updateAllActionUIs(productId); 
+    updateCardActionUI(productId); 
     updateGlobalCartUI(); 
 }
 
-function updateAllActionUIs(productId) {
-    document.querySelectorAll(`[id^="action-container-${productId}"]`).forEach(container => {
-        updateSpecificCardActionUI(productId, container);
-    });
-}
-
-function updateSpecificCardActionUI(productId, container) { 
+function updateCardActionUI(productId) { 
+    const container = document.getElementById(`action-container-${productId}`); 
     if (!container) return; 
     
     const item = cart.find(i => i._id === productId); 
     const qty = item ? item.qty : 0; 
     
+    const compareBtn = container.querySelector('button[title="Compare Prices Nearby"]');
     container.innerHTML = ''; 
+    if (compareBtn) container.appendChild(compareBtn);
     
     if (qty === 0) { 
         const btn = document.createElement('button');
@@ -610,16 +665,19 @@ let updateGlobalCartUI = function() {
     const totalItems = cart.reduce((s, i) => s + i.qty, 0); 
     const subtotal = cart.reduce((s, i) => s + (i.currentPrice * i.qty), 0); 
     
+    // --- NEW: INJECTING THUMBNAILS INTO THE FLOATING CART RIBBON ---
     const ribbonThumbnails = document.getElementById('ribbon-thumbnails');
     if (ribbonThumbnails) {
         ribbonThumbnails.innerHTML = '';
         if (totalItems > 0) {
+            // Get up to 3 unique images
             const uniqueImages = [...new Set(cart.map(i => i.imageUrl).filter(Boolean))].slice(0, 3);
             uniqueImages.forEach(imgUrl => {
                 const img = document.createElement('img');
                 img.src = optimizeCloudinaryUrl(imgUrl, 50);
                 ribbonThumbnails.appendChild(img);
             });
+            // Show +X more if needed
             if (cart.length > 3) {
                 const overflow = document.createElement('div');
                 overflow.className = 'ribbon-overflow-count';
@@ -631,7 +689,7 @@ let updateGlobalCartUI = function() {
     
     if (totalItems > 0) { 
         document.getElementById('ribbon-items-count').textContent = `${totalItems} ITEM${totalItems > 1 ? 'S' : ''}`; 
-        document.getElementById('ribbon-total-price').textContent = `₹${subtotal}`; 
+        document.getElementById('ribbon-total-price').textContent = `Rs ${subtotal}`; 
         cartRibbon.classList.remove('hidden'); 
     } else { 
         cartRibbon.classList.add('hidden'); 
@@ -640,9 +698,12 @@ let updateGlobalCartUI = function() {
     cartItemsContainer.innerHTML = ''; 
     
     if (cart.length === 0) { 
-        cartItemsContainer.innerHTML = '<p style="text-align:center; color:#94A3B8; margin-top:40px;">Your cart is empty.</p>';
-        document.getElementById('cart-subtotal').textContent = '₹0'; 
-        document.getElementById('cart-total').textContent = '₹0'; 
+        const emptyCart = document.createElement('p');
+        emptyCart.style.cssText = "text-align:center; color:#94A3B8; margin-top:40px;";
+        emptyCart.textContent = "Your cart is empty.";
+        cartItemsContainer.appendChild(emptyCart);
+        document.getElementById('cart-subtotal').textContent = 'Rs 0'; 
+        document.getElementById('cart-total').textContent = 'Rs 0'; 
         return; 
     } 
 
@@ -661,7 +722,7 @@ let updateGlobalCartUI = function() {
         const group = groupedCart[storeId];
         
         const headerDiv = document.createElement('div');
-        headerDiv.style.cssText = "background: #f8fafc; padding: 8px 12px; border-radius: 8px; font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase; margin: 16px 0 8px 0; letter-spacing: 0.5px;";
+        headerDiv.style.cssText = "background: #f1f5f9; padding: 8px 12px; border-radius: 6px; font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase; margin: 16px 0 8px 0; letter-spacing: 0.5px;";
         headerDiv.textContent = `📦 Fulfilled by ${group.storeName}`;
         fragment.appendChild(headerDiv);
 
@@ -670,16 +731,19 @@ let updateGlobalCartUI = function() {
             row.className = 'cart-item-row'; 
             
             const imgDiv = document.createElement('div');
-            imgDiv.style.cssText = "display:flex; align-items:center; justify-content:center; width:40px;";
+            imgDiv.style.cssText = "display:flex; align-items:center; justify-content:center; width:32px;";
             const optimizedThumb = optimizeCloudinaryUrl(item.imageUrl, 100);
             
             if (item.imageUrl) {
                 const img = document.createElement('img');
                 img.src = optimizedThumb;
-                img.style.cssText = "width:40px; height:40px; border-radius:8px; object-fit:contain; border: 1px solid #e2e8f0;";
+                img.style.cssText = "width:32px; height:32px; border-radius:6px; object-fit:contain;";
                 imgDiv.appendChild(img);
             } else {
-                imgDiv.innerHTML = '<div style="font-size:24px;">📦</div>';
+                const box = document.createElement('div');
+                box.style.fontSize = "24px";
+                box.textContent = "📦";
+                imgDiv.appendChild(box);
             }
 
             const infoDiv = document.createElement('div');
@@ -689,7 +753,7 @@ let updateGlobalCartUI = function() {
             title.textContent = item.name;
             const price = document.createElement('div');
             price.className = 'cart-item-price';
-            price.textContent = `₹${item.currentPrice}`;
+            price.textContent = `Rs ${item.currentPrice}`;
             infoDiv.appendChild(title);
             infoDiv.appendChild(price);
 
@@ -727,12 +791,8 @@ let updateGlobalCartUI = function() {
     const uniqueStoreIds = Object.keys(groupedCart).length;
     const dynamicDeliveryTotal = uniqueStoreIds === 0 ? 0 : (DELIVERY_FEE * uniqueStoreIds);
 
-    let finalTotal = subtotal + dynamicDeliveryTotal;
-    let discountApplied = 0;
-
-    document.getElementById('cart-subtotal').textContent = `₹${subtotal}`; 
-    document.getElementById('cart-delivery').textContent = `₹${dynamicDeliveryTotal}`; 
-    document.getElementById('cart-total').textContent = `₹${finalTotal}`; 
+    document.getElementById('cart-subtotal').textContent = `Rs ${subtotal}`; 
+    document.getElementById('cart-total').textContent = `Rs ${subtotal + dynamicDeliveryTotal}`; 
 }
 
 function openCart() { 
@@ -773,6 +833,7 @@ async function placeOrder() {
     checkoutBtn.textContent = 'Processing...'; 
     checkoutBtn.disabled = true; 
     
+    // --- NEW: PHASE 17 MARKETING ATTRIBUTION INJECTION ---
     const marketingRef = localStorage.getItem('dailyPick_marketingRef');
     const finalNotes = marketingRef ? `[MARKETING REF: ${marketingRef}]` : '';
 
@@ -787,7 +848,8 @@ async function placeOrder() {
     const storeIds = Object.keys(groupedCart);
     const totalDeliveryFee = DELIVERY_FEE * storeIds.length; 
     const grandSubtotal = cart.reduce((s, i) => s + (i.currentPrice * i.qty), 0); 
-    let finalTotal = grandSubtotal + totalDeliveryFee; 
+    const finalTotal = grandSubtotal + totalDeliveryFee; 
+    const scheduleTime = selectedDeliveryType === 'Routine' ? document.getElementById('schedule-time').value : 'ASAP'; 
     
     const payloadCarts = storeIds.map(sId => ({
         storeId: sId === 'default' ? null : sId,
@@ -805,11 +867,17 @@ async function placeOrder() {
                 headers: { 
                     'Content-Type': 'application/json',
                     'Idempotency-Key': idempotencyKey,
+                    // Send the attribution silently so the backend controller can access it if needed
                     'x-marketing-attribution-id': marketingRef || '' 
                 }, 
                 body: JSON.stringify({
-                    customerName: name, customerPhone: phone, deliveryAddress: address, 
-                    carts: payloadCarts, notes: finalNotes, paymentMethod: selectedPaymentMethod,
+                    customerName: name, 
+                    customerPhone: phone, 
+                    deliveryAddress: address, 
+                    carts: payloadCarts, 
+                    // Ensures the marketing ref appears in the admin packing slips and UI instantly!
+                    notes: finalNotes, 
+                    paymentMethod: selectedPaymentMethod,
                     transactionId: transactionId
                 }) 
             }); 
@@ -819,13 +887,16 @@ async function placeOrder() {
             if (result.success) {
                 localStorage.setItem('dailyPick_activeOrderId', result.splitShipmentGroupId || 'Group_Processing'); 
                 cart = []; 
-                document.getElementById('cust-name').value = ''; document.getElementById('cust-phone').value = ''; document.getElementById('cust-address').value = ''; 
-                setDeliveryType('Instant'); window.setPaymentMethod('Cash'); 
-                buildHomeUI(allProducts); 
+                document.getElementById('cust-name').value = ''; 
+                document.getElementById('cust-phone').value = ''; 
+                document.getElementById('cust-address').value = ''; 
+                setDeliveryType('Instant');
+                window.setPaymentMethod('Cash'); 
+                renderProducts(allProducts); 
                 updateGlobalCartUI(); 
                 closeCart(); 
                 switchView('orders'); 
-                showToast(`Success! 🚀`); 
+                showToast(`Omni-Cart Success! Split into ${result.totalShipments || storeIds.length} shipments. 🚀`); 
             } else {
                 showToast('Failed to place order: ' + result.message); 
             }
@@ -841,9 +912,12 @@ async function placeOrder() {
     if (selectedPaymentMethod === 'Online') {
         if (typeof Razorpay === 'undefined') {
             showToast("Payment gateway loading, please try again.");
-            checkoutBtn.textContent = 'Place Order'; checkoutBtn.disabled = false; isProcessingOrder = false; 
+            checkoutBtn.textContent = 'Place Order'; 
+            checkoutBtn.disabled = false; 
+            isProcessingOrder = false; 
             return;
         }
+        
         let razorpayKey = 'rzp_test_dummykey';
         try {
             const configRes = await fetch(`${BACKEND_URL}/api/config/gateway`);
@@ -852,14 +926,23 @@ async function placeOrder() {
         } catch(e) {}
 
         var options = {
-            "key": razorpayKey, "amount": finalTotal * 100, "currency": "INR", "name": "DailyPick",
-            "handler": async function (response) { await finalizeBackendOrder(response.razorpay_payment_id); },
-            "prefill": { "name": name, "contact": phone }, "theme": { "color": "#4F46E5" }
+            "key": razorpayKey, 
+            "amount": finalTotal * 100, 
+            "currency": "INR",
+            "name": "DailyPick",
+            "description": `Omni-Cart (${storeIds.length} Shipments)`,
+            "handler": async function (response) {
+                await finalizeBackendOrder(response.razorpay_payment_id);
+            },
+            "prefill": { "name": name, "contact": phone },
+            "theme": { "color": "#16A34A" }
         };
         var rzp1 = new Razorpay(options);
         rzp1.on('payment.failed', function (response){
             showToast('Payment Cancelled/Failed');
-            checkoutBtn.textContent = 'Place Order'; checkoutBtn.disabled = false; isProcessingOrder = false;
+            checkoutBtn.textContent = 'Place Order'; 
+            checkoutBtn.disabled = false;
+            isProcessingOrder = false;
         });
         rzp1.open();
     } else {
@@ -871,11 +954,19 @@ let checkOrderStatus = async function() {
     const savedOrderId = localStorage.getItem('dailyPick_activeOrderId'); 
     
     if (!savedOrderId) {
-        trackingContent.innerHTML = '<p class="empty-state" style="color: #64748b; text-align: center; margin-top: 40px;">You have no active orders right now.</p>';
+        trackingContent.innerHTML = '';
+        const emp = document.createElement('p');
+        emp.className = 'empty-state';
+        emp.textContent = 'You have no active orders right now.';
+        trackingContent.appendChild(emp);
         return;
     } 
     
-    trackingContent.innerHTML = '<p class="empty-state" style="text-align: center; margin-top: 40px;">Fetching live status...</p>';
+    trackingContent.innerHTML = '';
+    const loading = document.createElement('p');
+    loading.className = 'empty-state';
+    loading.textContent = 'Fetching live status...';
+    trackingContent.appendChild(loading);
     
     try { 
         const endpoint = savedOrderId.startsWith('OMNI-') ? `/api/orders?groupId=${savedOrderId}` : `/api/orders/${savedOrderId}`;
@@ -885,46 +976,60 @@ let checkOrderStatus = async function() {
         if (result.success) { 
             const order = Array.isArray(result.data) ? result.data[0] : result.data; 
             const timeString = new Date(order.createdAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); 
+            
             const displayId = order.orderNumber || '#' + (order._id).toString().slice(-4).toUpperCase();
 
             trackingContent.innerHTML = ''; 
             
             const card = document.createElement('div');
             card.className = 'tracking-card';
-            card.innerHTML = `
-                <h3 style="font-size: 16px; margin-bottom: 4px;">Order ${displayId}</h3>
-                <p style="color: #64748b; font-size: 12px; margin-bottom: 16px;">Placed at ${timeString}</p>
-                <div class="status-badge ${order.status === 'Dispatched' ? 'dispatched' : ''}">${order.status}</div>
-                <div style="margin-top:16px; font-size:12px; font-weight:700; color: ${order.deliveryType === 'Routine' ? '#64748B' : '#16A34A'}">
-                    ${order.deliveryType === 'Routine' ? `📅 Routine: ${order.scheduleTime}` : '⚡ Instant Delivery'}
-                </div>
-                <div style="margin-top:16px; font-size:15px; font-weight:800;">
-                    ${order.paymentMethod === 'Online' ? `Paid: ₹${order.totalAmount} (Online)` : `To Pay: ₹${order.totalAmount} (COD)`}
-                </div>
-            `;
+            
+            const h3 = document.createElement('h3');
+            h3.textContent = `Order ${displayId}`;
+            
+            const pTime = document.createElement('p');
+            pTime.textContent = `Placed at ${timeString}`;
+            
+            const statusBadge = document.createElement('div');
+            statusBadge.className = `status-badge ${order.status === 'Dispatched' ? 'dispatched' : ''}`;
+            statusBadge.textContent = order.status;
+            
+            const schedBadge = document.createElement('div');
+            if (order.deliveryType === 'Routine') {
+                schedBadge.style.cssText = 'margin-top:12px; font-size:12px; color:#64748B; font-weight:700;';
+                schedBadge.textContent = `📅 Routine: ${order.scheduleTime}`;
+            } else {
+                schedBadge.style.cssText = 'margin-top:12px; font-size:12px; color:#16A34A; font-weight:700;';
+                schedBadge.textContent = '⚡ Instant Delivery';
+            }
+            
+            const totalDiv = document.createElement('div');
+            totalDiv.style.cssText = 'margin-top:24px; font-size:14px; font-weight:700;';
+            totalDiv.textContent = order.paymentMethod === 'Online' ? `Paid: Rs ${order.totalAmount} (Online)` : `To Pay: Rs ${order.totalAmount} (COD)`;
+            
+            card.appendChild(h3);
+            card.appendChild(pTime);
+            card.appendChild(statusBadge);
+            card.appendChild(schedBadge);
+            card.appendChild(totalDiv);
 
             if (order.trackingLink) {
                 const trackingBtn = document.createElement('a');
                 trackingBtn.href = order.trackingLink;
                 trackingBtn.target = '_blank';
-                trackingBtn.style.cssText = 'display:block; margin-top:16px; background:var(--primary); text-align:center; text-decoration:none; padding:14px; border-radius:12px; font-size:14px; font-weight: 800; color:white; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2);';
-                trackingBtn.innerHTML = `🛵 Track Rider: ${order.deliveryDriverName || 'Live'}`;
+                trackingBtn.className = 'primary-btn';
+                trackingBtn.style.cssText = 'display:block; margin-top:16px; background:#8b5cf6; text-align:center; text-decoration:none; padding:12px; border-radius:8px; font-size:13px; color:white;';
+                trackingBtn.innerHTML = `🛵 Track Rider: ${order.deliveryDriverName || 'Live Tracker'}`;
                 card.appendChild(trackingBtn);
             }
 
             if (order.status === 'Delivered' || order.status === 'Completed') {
                 const issueBtn = document.createElement('button');
                 issueBtn.onclick = () => window.openReportIssueModal(order._id);
-                issueBtn.style.cssText = 'display:block; width:100%; margin-top:12px; background:white; color:#ef4444; border:1px solid #fecaca; text-align:center; padding:12px; border-radius:12px; font-size:13px; font-weight:800; cursor:pointer;';
+                issueBtn.className = 'secondary-btn-small';
+                issueBtn.style.cssText = 'display:block; width:100%; margin-top:12px; background:white; color:#ef4444; border:1px solid #fecaca; text-align:center; padding:12px; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer;';
                 issueBtn.innerHTML = `⚠️ Report Damaged/Missing Item`;
                 card.appendChild(issueBtn);
-                
-                setTimeout(() => {
-                    if (!localStorage.getItem(`rated_${savedOrderId}`)) {
-                        document.getElementById('customer-rating-modal').classList.remove('hidden');
-                        document.getElementById('customer-rating-modal').setAttribute('data-order-id', savedOrderId);
-                    }
-                }, 500);
             }
 
             trackingContent.appendChild(card);
@@ -936,43 +1041,70 @@ let checkOrderStatus = async function() {
                 (async () => {
                     try {
                         const response = await fetch(`${BACKEND_URL}/api/orders/stream/customer/${order._id}`, {
-                            headers: token ? { 'Authorization': `Bearer ${token}` } : {}, credentials: 'include', signal: trackingStreamController.signal
+                            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                            credentials: 'include', 
+                            signal: trackingStreamController.signal
                         });
+
                         if (!response.ok) throw new Error('Tracking stream failed');
+                        
                         const reader = response.body.getReader();
                         const decoder = new TextDecoder('utf-8');
                         let buffer = '';
+
                         while (true) {
                             const { done, value } = await reader.read();
                             if (done) break;
+
                             buffer += decoder.decode(value, { stream: true });
                             const lines = buffer.split('\n\n');
                             buffer = lines.pop(); 
+
                             for (const line of lines) {
                                 if (line.startsWith('data: ')) {
                                     const dataStr = line.substring(6).trim();
                                     if (dataStr === ':' || !dataStr) continue;
+                                    
                                     try {
                                         const data = JSON.parse(dataStr);
                                         if (data.message) continue;
+                                        
                                         if (data.type === 'STATUS_UPDATE') {
                                             showToast('🚚 Your order has been dispatched!');
-                                            if (trackingStreamController) { trackingStreamController.abort(); trackingStreamController = null; }
+                                            if (trackingStreamController) {
+                                                trackingStreamController.abort();
+                                                trackingStreamController = null;
+                                            }
                                             checkOrderStatus();
                                             return; 
                                         }
-                                    } catch (err) {}
+                                    } catch (err) {
+                                        console.error("Stream parse error", err);
+                                    }
                                 }
                             }
                         }
-                    } catch (error) { trackingStreamController = null; }
+                    } catch (error) {
+                        if (error.name !== 'AbortError') {
+                            console.warn("Live tracking disconnected. Will retry on next view.");
+                            trackingStreamController = null;
+                        }
+                    }
                 })();
             }
         } else { 
-            trackingContent.innerHTML = '<p class="empty-state" style="text-align:center; margin-top:40px;">Order not found.</p>';
+            trackingContent.innerHTML = '';
+            const errP = document.createElement('p');
+            errP.className = 'empty-state';
+            errP.textContent = 'Order details could not be found.';
+            trackingContent.appendChild(errP);
         } 
     } catch(e) { 
-        trackingContent.innerHTML = '<p class="empty-state" style="text-align:center; margin-top:40px;">Network error.</p>';
+        trackingContent.innerHTML = '';
+        const netErr = document.createElement('p');
+        netErr.className = 'empty-state';
+        netErr.textContent = 'Network error checking status.';
+        trackingContent.appendChild(netErr);
     } 
 }
 
@@ -985,42 +1117,311 @@ function showToast(message) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // --- NEW: PHASE 17 MARKETING ATTRIBUTION CAPTURE ---
+    // Safely reads ?ref= or ?utm_campaign= from the URL and stores it for checkout
     const urlParams = new URLSearchParams(window.location.search);
     const ref = urlParams.get('ref') || urlParams.get('utm_campaign') || urlParams.get('source');
-    if (ref) localStorage.setItem('dailyPick_marketingRef', ref);
+    if (ref) {
+        localStorage.setItem('dailyPick_marketingRef', ref);
+        console.log('Marketing Attribution Captured:', ref);
+    }
+    // --------------------------------------------------
 
     document.getElementById('search-input').addEventListener('input', handleSearch);
-    document.querySelectorAll('[data-action="filter-cat"]').forEach(el => el.addEventListener('click', () => filterCategory(el.getAttribute('data-value'))));
-    document.querySelectorAll('[data-action="filter-tag"]').forEach(el => el.addEventListener('click', () => filterByTag(el.getAttribute('data-tag'), el.getAttribute('data-title'))));
+    
+    document.querySelectorAll('[data-action="filter-cat"]').forEach(el => {
+        el.addEventListener('click', () => filterCategory(el.getAttribute('data-value')));
+    });
+    
+    document.querySelectorAll('[data-action="filter-tag"]').forEach(el => {
+        el.addEventListener('click', () => filterByTag(el.getAttribute('data-tag'), el.getAttribute('data-title')));
+    });
+    
     document.getElementById('btn-view-all').addEventListener('click', () => filterCategory('All'));
     document.getElementById('btn-refresh-orders').addEventListener('click', checkOrderStatus);
     document.getElementById('cart-ribbon').addEventListener('click', openCart);
     document.getElementById('btn-close-cart').addEventListener('click', closeCart);
     document.getElementById('btn-checkout').addEventListener('click', placeOrder);
+    
     document.getElementById('tab-instant').addEventListener('click', () => setDeliveryType('Instant'));
     document.getElementById('tab-routine').addEventListener('click', () => setDeliveryType('Routine'));
+    
     document.getElementById('nav-shop').addEventListener('click', () => switchView('shop'));
     document.getElementById('nav-orders').addEventListener('click', () => switchView('orders'));
     document.getElementById('nav-cats').addEventListener('click', () => window.scrollTo({top: 0, behavior: 'smooth'}));
+
     document.querySelector('.profile-icon').addEventListener('click', openCustomerLogin);
     updateAuthUI();
+
     fetchCategories(); 
     fetchEnterprisePartners(); 
     initializeLocationAndFetch();
 });
 
+const legacyUpdateGlobalCartUI = updateGlobalCartUI;
+updateGlobalCartUI = function() {
+    legacyUpdateGlobalCartUI(); 
+    
+    const groups = document.querySelectorAll('#cart-items-container > div');
+    groups.forEach(group => {
+        if (group.textContent.includes('📦 Fulfilled by')) {
+            const isEnterprise = !group.textContent.includes('DailyPick Platform');
+            
+            const deliveryEta = document.createElement('div');
+            deliveryEta.style.cssText = `font-size: 10px; font-weight: 700; margin-top: 4px; padding: 2px 6px; border-radius: 4px; display: inline-block; ${isEnterprise ? 'background: #dbeafe; color: #0369a1;' : 'background: #dcfce7; color: #166534;'}`;
+            deliveryEta.textContent = isEnterprise ? '🚚 Enterprise Delivery (Next Day)' : '⚡ Platform Delivery (15 Mins)';
+            
+            group.appendChild(deliveryEta);
+        }
+    });
+
+    const uniqueStores = [...new Set(cart.map(i => i.storeId || 'default'))];
+    const header = document.querySelector('.cart-header');
+    let existingBanner = document.getElementById('omni-cart-banner');
+
+    if (uniqueStores.length > 1) {
+        if (!existingBanner) {
+            existingBanner = document.createElement('div');
+            existingBanner.id = 'omni-cart-banner';
+            existingBanner.style.cssText = "background: #eef2ff; padding: 12px; border-bottom: 1px solid #cbd5e1; text-align: center;";
+            existingBanner.innerHTML = '<p style="font-size: 12px; font-weight: 800; color: #3b82f6; margin: 0;">Omni-Cart Active</p><p style="font-size: 11px; color: #475569; margin: 4px 0 0 0;">Items will arrive in separate shipments.</p>';
+            header.parentNode.insertBefore(existingBanner, header.nextSibling);
+        }
+    } else {
+        if (existingBanner) existingBanner.remove();
+    }
+};
+
+let customerLoyaltyBalance = 0;
+let isLoyaltyApplied = false;
+
+const originalUpdateAuthUIPhase6 = updateAuthUI;
+updateAuthUI = async function() {
+    if (typeof originalUpdateAuthUIPhase6 === 'function') originalUpdateAuthUIPhase6();
+    
+    const token = localStorage.getItem('dailyPick_customerToken');
+    if (token) {
+        try {
+            const res = await storeFetchWithAuth(`${BACKEND_URL}/api/customers/me`);
+            const result = await res.json();
+            if (result.success && result.data) {
+                customerLoyaltyBalance = result.data.loyaltyPoints || 0;
+                if (customerLoyaltyBalance > 0) {
+                    document.getElementById('loyalty-wallet-container').classList.remove('hidden');
+                    document.getElementById('loyalty-balance-display').textContent = `Rs ${customerLoyaltyBalance}`;
+                }
+            }
+        } catch(e) { console.warn("Loyalty fetch failed", e); }
+    } else {
+        customerLoyaltyBalance = 0;
+        isLoyaltyApplied = false;
+        if(document.getElementById('use-loyalty-toggle')) document.getElementById('use-loyalty-toggle').checked = false;
+        if(document.getElementById('loyalty-wallet-container')) document.getElementById('loyalty-wallet-container').classList.add('hidden');
+    }
+};
+
+window.toggleLoyaltyPoints = function() {
+    isLoyaltyApplied = document.getElementById('use-loyalty-toggle').checked;
+    updateGlobalCartUI();
+};
+
+const originalUpdateGlobalCartUIPhase6 = updateGlobalCartUI;
+updateGlobalCartUI = function() {
+    originalUpdateGlobalCartUIPhase6();
+    
+    if (cart.length === 0) return;
+
+    const groupedCart = {};
+    cart.forEach(item => {
+        const sId = item.storeId || 'default';
+        if (!groupedCart[sId]) groupedCart[sId] = true;
+    });
+    const uniqueStores = Object.keys(groupedCart).length;
+    
+    const subtotal = cart.reduce((s, i) => s + (i.currentPrice * i.qty), 0);
+    const totalDeliveryFee = uniqueStores === 0 ? 0 : (DELIVERY_FEE * uniqueStores);
+    let finalTotal = subtotal + totalDeliveryFee;
+    let discountApplied = 0;
+
+    if (isLoyaltyApplied && customerLoyaltyBalance > 0) {
+        discountApplied = Math.min(customerLoyaltyBalance, subtotal); 
+        finalTotal -= discountApplied;
+        
+        document.getElementById('loyalty-discount-row').classList.remove('hidden');
+        document.getElementById('cart-loyalty-discount').textContent = `-Rs ${discountApplied}`;
+    } else {
+        document.getElementById('loyalty-discount-row').classList.add('hidden');
+    }
+
+    document.getElementById('cart-total').textContent = `Rs ${finalTotal}`;
+};
+
+const originalStoreFetchWithAuthPhase6 = storeFetchWithAuth;
+storeFetchWithAuth = async function(url, options = {}) {
+    if (url.includes('/api/orders/omni-checkout') && options.body) {
+        try {
+            let payload = JSON.parse(options.body);
+            payload.useLoyaltyPoints = isLoyaltyApplied;
+            options.body = JSON.stringify(payload);
+        } catch(e) {}
+    }
+    return await originalStoreFetchWithAuthPhase6(url, options);
+};
+
+const originalUpdateGlobalCartUIPhase10 = updateGlobalCartUI;
+updateGlobalCartUI = function() {
+    originalUpdateGlobalCartUIPhase10();
+    
+    setTimeout(async () => {
+        const upsellsContainer = document.getElementById('smart-cart-upsells-container');
+        const upsellsList = document.getElementById('smart-cart-upsells-list');
+        
+        if (cart.length === 0 || !upsellsContainer || !upsellsList) {
+            if(upsellsContainer) upsellsContainer.classList.add('hidden');
+            return;
+        }
+        
+        const cartCategories = [...new Set(cart.map(item => item.category).filter(Boolean))];
+        
+        try {
+            const res = await storeFetchWithAuth(`${BACKEND_URL}/api/products/smart-upsells`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cartCategories, storeId: cart[0].storeId })
+            });
+            const result = await res.json();
+            
+            if (result.success && result.data && result.data.length > 0) {
+                upsellsList.innerHTML = '';
+                
+                const cartIds = cart.map(i => i._id.toString());
+                const filteredUpsells = result.data.filter(u => !cartIds.includes(u._id.toString())).slice(0, 3);
+                
+                if (filteredUpsells.length === 0) {
+                    upsellsContainer.classList.add('hidden');
+                    return;
+                }
+                
+                filteredUpsells.forEach(item => {
+                    const v = item.variants[0];
+                    upsellsList.innerHTML += `
+                        <div style="flex-shrink: 0; width: 120px; background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
+                            <img src="${optimizeCloudinaryUrl(item.imageUrl, 100) || ''}" style="width: 60px; height: 60px; object-fit: contain; margin-bottom: 8px;" onerror="this.style.display='none'">
+                            <p style="font-size: 11px; font-weight: 700; margin: 0 0 4px 0; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</p>
+                            <p style="font-size: 13px; color: var(--primary); font-weight: 800; margin: 0 0 10px 0;">Rs ${v.price}</p>
+                            <button onclick="quickAdd('${item._id}')" style="background: #f1f5f9; color: var(--primary); border: none; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 800; cursor: pointer; width: 100%;">+ ADD</button>
+                        </div>
+                    `;
+                    
+                    if (!allProducts.find(p => p._id === item._id)) {
+                        allProducts.push(item);
+                    }
+                });
+                
+                upsellsContainer.classList.remove('hidden');
+            } else {
+                upsellsContainer.classList.add('hidden');
+            }
+        } catch (e) {
+            console.warn("Smart Upsells failed to load", e);
+            upsellsContainer.classList.add('hidden');
+        }
+    }, 10);
+};
+
+const commonSynonyms = {
+    "late night": ["chips", "snack", "coke", "soda", "chocolate", "munchies", "ice cream"],
+    "morning": ["milk", "bread", "butter", "eggs", "coffee", "tea"],
+    "cleaning": ["soap", "detergent", "broom", "mop", "phenyl", "harpic"],
+    "party": ["cold drink", "soda", "chips", "namkeen", "disposable", "cups"],
+    "sick": ["medicine", "soup", "honey", "tea", "vicks", "crocin"],
+    "mlik": ["milk"],
+    "bred": ["bread"],
+    "shmpoo": ["shampoo"],
+    "sope": ["soap"],
+    "cravings": ["chips", "chocolate", "soda", "snack"]
+};
+
+handleSearch = async function(event) { 
+    const rawQuery = event.target.value.toLowerCase().trim(); 
+    if (!rawQuery) { filterCategory('All'); return; } 
+    if (rawQuery.length < 2) return; 
+    
+    document.getElementById('product-grid-title').textContent = `Searching...`;
+    
+    const banner = document.getElementById('partner-brand-banner');
+    if (banner) banner.classList.add('hidden');
+
+    clearTimeout(searchDebounceTimeout);
+    searchDebounceTimeout = setTimeout(() => {
+        let searchTerms = rawQuery.split(' ');
+        
+        for (const [key, related] of Object.entries(commonSynonyms)) {
+            if (rawQuery.includes(key)) {
+                searchTerms.push(...related);
+            }
+        }
+        
+        const scoredProducts = allProducts.map(p => {
+            let score = 0;
+            const pName = (p.name || '').toLowerCase();
+            const pCat = (p.category || '').toLowerCase();
+            const pTags = (p.searchTags || '').toLowerCase();
+            
+            searchTerms.forEach(term => {
+                if (pName.includes(term)) score += 10;
+                if (pCat.includes(term)) score += 5;
+                if (pTags.includes(term)) score += 5;
+                
+                if (term.length > 3 && pName.includes(term.substring(0, term.length - 1))) score += 2;
+            });
+            return { product: p, score };
+        }).filter(item => item.score > 0)
+          .sort((a, b) => b.score - a.score)
+          .map(item => item.product);
+
+        document.getElementById('product-grid-title').textContent = `Search Results`;
+        renderProducts(scoredProducts);
+    }, 300);
+};
+
+const originalCheckOrderStatusPhase11 = checkOrderStatus;
+
+checkOrderStatus = async function() {
+    await originalCheckOrderStatusPhase11();
+    
+    setTimeout(() => {
+        const savedOrderId = localStorage.getItem('dailyPick_activeOrderId');
+        const content = document.getElementById('tracking-content');
+        
+        if (savedOrderId && content && content.innerHTML.includes('Completed')) {
+            if (localStorage.getItem(`rated_${savedOrderId}`)) return; 
+            
+            const ratingContainer = document.getElementById('customer-rating-modal');
+            if (ratingContainer) {
+                ratingContainer.classList.remove('hidden');
+                ratingContainer.setAttribute('data-order-id', savedOrderId);
+            }
+        }
+    }, 500); 
+};
+
 window.submitOrderRating = async function(score) {
     const modal = document.getElementById('customer-rating-modal');
     if (!modal) return;
+    
     const orderId = modal.getAttribute('data-order-id');
-    modal.innerHTML = '<div style="padding: 32px; text-align: center;"><h3 style="color:#0f172a; font-size:24px;">Thank you! ❤️</h3><p style="color:#64748B; font-size:14px; margin-top:8px;">Your feedback helps us improve.</p></div>';
+    
+    modal.innerHTML = '<div style="padding: 24px; text-align: center;"><h3 style="color:#0f172a;">Thank you for your feedback! ❤️</h3><p style="color:#64748B; font-size:14px;">We are constantly improving.</p></div>';
     setTimeout(() => modal.classList.add('hidden'), 2000);
     
     if (orderId) {
         localStorage.setItem(`rated_${orderId}`, 'true');
         try {
             await storeFetchWithAuth(`${BACKEND_URL}/api/orders/${orderId}/rate`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rating: score })
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rating: score })
             });
         } catch(e) {}
     }
@@ -1030,7 +1431,10 @@ document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden' && cart && cart.length > 0) {
         const token = localStorage.getItem('dailyPick_customerToken');
         if (token) {
-            navigator.sendBeacon(`${BACKEND_URL}/api/orders/abandoned-cart`, JSON.stringify({ cartSnapshot: cart, timestamp: new Date().toISOString() }));
+            navigator.sendBeacon(`${BACKEND_URL}/api/orders/abandoned-cart`, JSON.stringify({
+                cartSnapshot: cart,
+                timestamp: new Date().toISOString()
+            }));
         }
     }
 });
@@ -1039,21 +1443,55 @@ let consumerLiveMap = null;
 let riderMarker = null;
 let consumerTrackingWS = null;
 
+const originalCheckOrderStatusPhase13 = checkOrderStatus;
+checkOrderStatus = async function() {
+    await originalCheckOrderStatusPhase13();
+
+    setTimeout(() => {
+        const content = document.getElementById('tracking-content');
+        if (!content) return;
+        
+        if (content.innerHTML.includes('Dispatched') && !content.innerHTML.includes('live-rider-map')) {
+            const savedOrderId = localStorage.getItem('dailyPick_activeOrderId');
+            if(!savedOrderId) return;
+
+            if (typeof L === 'undefined') {
+                const leafletCss = document.createElement('link');
+                leafletCss.rel = 'stylesheet';
+                leafletCss.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+                document.head.appendChild(leafletCss);
+
+                const leafletJs = document.createElement('script');
+                leafletJs.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+                document.head.appendChild(leafletJs);
+                
+                leafletJs.onload = () => initializeLiveMap(savedOrderId);
+            } else {
+                initializeLiveMap(savedOrderId);
+            }
+        }
+    }, 800);
+};
+
 function initializeLiveMap(orderId) {
     const mapContainer = document.createElement('div');
     mapContainer.id = 'live-rider-map';
-    mapContainer.style.cssText = 'width: 100%; height: 250px; margin-top: 20px; border-radius: 16px; z-index: 1; border: 1px solid #e2e8f0;';
+    mapContainer.style.cssText = 'width: 100%; height: 250px; margin-top: 20px; border-radius: 16px; z-index: 1;';
+    
     document.getElementById('tracking-content').appendChild(mapContainer);
 
-    const defaultLat = userLat || 18.6298; const defaultLng = userLng || 73.7997;
+    const defaultLat = userLat || 18.6298;
+    const defaultLng = userLng || 73.7997;
+
     consumerLiveMap = L.map('live-rider-map').setView([defaultLat, defaultLng], 15);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(consumerLiveMap);
     
-    const riderIcon = L.divIcon({ html: '<div style="font-size: 28px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));">🛵</div>', className: '', iconSize: [28, 28], iconAnchor: [14, 14] });
+    const riderIcon = L.divIcon({ html: '<div style="font-size: 24px;">🛵</div>', className: '', iconSize: [24, 24], iconAnchor: [12, 12] });
     riderMarker = L.marker([defaultLat, defaultLng], { icon: riderIcon }).addTo(consumerLiveMap);
 
     if (consumerTrackingWS) consumerTrackingWS.close();
     consumerTrackingWS = new WebSocket(`wss://dailypick-backend-production-05d6.up.railway.app/api/ws/track?orderId=${orderId}`);
+
     consumerTrackingWS.onmessage = (event) => {
         try {
             const data = JSON.parse(event.data);
@@ -1076,61 +1514,196 @@ window.logoutCustomer = logoutCustomer;
 })();
 
 (function() {
+    const BACKEND_URL = 'https://dailypick-backend-production-05d6.up.railway.app';
+    
+    async function storeFetchWithAuth(url, options = {}) {
+        const token = localStorage.getItem('dailyPick_customerToken'); 
+        options.headers = options.headers || {};
+        if (token) options.headers['Authorization'] = `Bearer ${token}`;
+        return fetch(url, options);
+    }
+
+    async function fetchDiscoveryStores(lat, lng) {
+        try {
+            const res = await storeFetchWithAuth(`${BACKEND_URL}/api/stores/discover?lat=${lat}&lng=${lng}`);
+            const result = await res.json();
+            
+            if (result.success && result.data) {
+                renderDiscoveryUI(result.data);
+            }
+        } catch(e) {
+            console.warn("Discovery API unavailable", e);
+        }
+    }
+
+    function renderDiscoveryUI(data) {
+        const injectionPoint = document.getElementById('discovery-injection-point');
+        const promoSection = document.querySelector('.promo-banners');
+        
+        if (injectionPoint && promoSection && promoSection.parentNode) {
+            promoSection.parentNode.insertBefore(injectionPoint, promoSection.nextSibling);
+            injectionPoint.style.display = 'block';
+            
+            const container = document.getElementById('discovery-lists-container');
+            container.innerHTML = '';
+            
+            if (data.megaMarts && data.megaMarts.length > 0) {
+                const megaLabel = document.createElement('h3');
+                megaLabel.style.cssText = 'font-size: 14px; font-weight: 800; color: var(--text-main); margin: 16px 16px 12px 16px; letter-spacing: -0.5px;';
+                megaLabel.textContent = '🏢 Mega Marts (Next Day)';
+                container.appendChild(megaLabel);
+                
+                const carousel = document.createElement('div');
+                carousel.className = 'discovery-carousel';
+                data.megaMarts.forEach(store => {
+                    carousel.innerHTML += `
+                        <div class="discovery-card">
+                            <h4 class="discovery-title">${store.name}</h4>
+                            <p class="discovery-meta">★ ${store.metrics?.rating || '4.8'} • ${(store.distanceInMeters/1000).toFixed(1)} km away</p>
+                            <span class="discovery-badge badge-enterprise">Enterprise ERP Synced</span>
+                        </div>
+                    `;
+                });
+                container.appendChild(carousel);
+            }
+            
+            if (data.quickCommerce && data.quickCommerce.length > 0) {
+                const quickLabel = document.createElement('h3');
+                quickLabel.style.cssText = 'font-size: 14px; font-weight: 800; color: var(--text-main); margin: 16px 16px 12px 16px; letter-spacing: -0.5px;';
+                quickLabel.textContent = '⚡ Quick Commerce (15 Mins)';
+                container.appendChild(quickLabel);
+                
+                const carousel = document.createElement('div');
+                carousel.className = 'discovery-carousel';
+                data.quickCommerce.forEach(store => {
+                    carousel.innerHTML += `
+                        <div class="discovery-card">
+                            <h4 class="discovery-title">${store.name}</h4>
+                            <p class="discovery-meta">★ ${store.metrics?.rating || '4.5'} • ${(store.distanceInMeters/1000).toFixed(1)} km away</p>
+                            <span class="discovery-badge badge-quick">Platform Delivery Fleet</span>
+                        </div>
+                    `;
+                });
+                container.appendChild(carousel);
+            }
+        }
+    }
+
+    const originalNavGeolocation = navigator.geolocation.getCurrentPosition;
+    if (originalNavGeolocation) {
+        navigator.geolocation.getCurrentPosition = function(success, error, options) {
+            const wrappedSuccess = function(position) {
+                fetchDiscoveryStores(position.coords.latitude, position.coords.longitude);
+                if (success) success(position);
+            };
+            return originalNavGeolocation.call(navigator.geolocation, wrappedSuccess, error, options);
+        };
+    }
+})();
+
+(function() {
     window.registerNativePushToken = async function(jwtToken) {
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
             try {
                 const { PushNotifications } = window.Capacitor.Plugins;
                 const permStatus = await PushNotifications.requestPermissions();
+                
                 if (permStatus.receive === 'granted') {
                     await PushNotifications.register();
+                    
                     PushNotifications.addListener('registration', (token) => {
                         fetch('https://dailypick-backend-production-05d6.up.railway.app/api/customers/device-token', {
-                            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwtToken}` }, body: JSON.stringify({ fcmToken: token.value })
+                            method: 'POST',
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${jwtToken}`
+                            },
+                            body: JSON.stringify({ fcmToken: token.value })
                         }).catch(()=>{});
                     });
+
                     PushNotifications.addListener('pushNotificationReceived', (notification) => {
+                        console.log('Push received: ', notification);
                         if (notification.data && notification.data.orderId) {
                             localStorage.setItem('dailyPick_activeOrderId', notification.data.orderId);
                             document.getElementById('nav-orders').click();
                         }
                     });
                 }
-            } catch(e) {}
+            } catch(e) {
+                console.error("Native push bridge failed:", e);
+            }
         }
     };
 })();
 
+// ============================================================================
+// --- NEW: PHASE 16 NATIVE CAPACITOR HARDWARE BRIDGE (CAMERA, GPS, HAPTICS)      ---
+// ============================================================================
 (function() {
+    // 1. Native Haptic Feedback Interceptor
     const triggerHaptic = async (style = 'LIGHT') => {
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
-            try { const { Haptics, ImpactStyle } = window.Capacitor.Plugins; await Haptics.impact({ style: ImpactStyle[style] || ImpactStyle.Light }); } catch (e) {}
+            try {
+                const { Haptics, ImpactStyle } = window.Capacitor.Plugins;
+                await Haptics.impact({ style: ImpactStyle[style] || ImpactStyle.Light });
+            } catch (e) {}
         }
     };
 
+    // Safely wrap the cart interactions to trigger physical clicks
     const originalQuickAddPhase16 = window.quickAdd;
-    window.quickAdd = function(productId) { triggerHaptic('MEDIUM'); originalQuickAddPhase16(productId); };
+    window.quickAdd = function(productId) {
+        triggerHaptic('MEDIUM');
+        originalQuickAddPhase16(productId);
+    };
 
     const originalAdjustQtyPhase16 = window.adjustQty;
-    window.adjustQty = function(productId, change) { triggerHaptic('LIGHT'); originalAdjustQtyPhase16(productId, change); };
+    window.adjustQty = function(productId, change) {
+        triggerHaptic('LIGHT');
+        originalAdjustQtyPhase16(productId, change);
+    };
 
+    // 2. Native Camera / Gallery Upload logic for Damaged Items
     window.openReportIssueModal = function(orderId) {
         const modal = document.getElementById('report-issue-modal');
-        if (modal) { modal.classList.remove('hidden'); modal.setAttribute('data-issue-order', orderId); }
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.setAttribute('data-issue-order', orderId);
+        }
     };
 
     window.closeReportIssueModal = function() {
         const modal = document.getElementById('report-issue-modal');
-        if (modal) { modal.classList.add('hidden'); document.getElementById('photo-preview-container').classList.add('hidden'); document.getElementById('issue-photo-preview').src = ''; modal.removeAttribute('data-issue-photo-base64'); }
+        if (modal) {
+            modal.classList.add('hidden');
+            document.getElementById('photo-preview-container').classList.add('hidden');
+            document.getElementById('issue-photo-preview').src = '';
+            modal.removeAttribute('data-issue-photo-base64');
+        }
     };
 
     window.triggerNativeCamera = async function() {
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
             try {
                 const { Camera, CameraResultType, CameraSource } = window.Capacitor.Plugins;
-                const image = await Camera.getPhoto({ quality: 80, allowEditing: false, resultType: CameraResultType.Base64, source: CameraSource.Prompt });
-                if (image && image.base64String) processBase64Photo(image.base64String);
-            } catch (error) {}
-        } else { document.getElementById('fallback-file-upload').click(); }
+                const image = await Camera.getPhoto({
+                    quality: 80,
+                    allowEditing: false,
+                    resultType: CameraResultType.Base64,
+                    source: CameraSource.Prompt // Asks user: Camera or Gallery
+                });
+
+                if (image && image.base64String) {
+                    processBase64Photo(image.base64String);
+                }
+            } catch (error) {
+                console.error("Camera permission denied or closed", error);
+            }
+        } else {
+            // Web fallback: Just click the hidden file input
+            document.getElementById('fallback-file-upload').click();
+        }
     };
 
     window.handleFallbackPhotoUpload = function(event) {
@@ -1138,13 +1711,21 @@ window.logoutCustomer = logoutCustomer;
         if (!file) return;
         const reader = new FileReader();
         reader.readAsDataURL(file);
-        reader.onload = () => { processBase64Photo(reader.result.split(',')[1]); };
+        reader.onload = () => {
+            const base64String = reader.result.split(',')[1];
+            processBase64Photo(base64String);
+        };
     };
 
     function processBase64Photo(base64String) {
-        document.getElementById('issue-photo-preview').src = `data:image/jpeg;base64,${base64String}`;
-        document.getElementById('photo-preview-container').classList.remove('hidden');
-        document.getElementById('report-issue-modal').setAttribute('data-issue-photo-base64', base64String);
+        const imgEl = document.getElementById('issue-photo-preview');
+        const container = document.getElementById('photo-preview-container');
+        const modal = document.getElementById('report-issue-modal');
+        
+        imgEl.src = `data:image/jpeg;base64,${base64String}`;
+        container.classList.remove('hidden');
+        modal.setAttribute('data-issue-photo-base64', base64String);
+        
         triggerHaptic('HEAVY');
     }
 
@@ -1152,24 +1733,42 @@ window.logoutCustomer = logoutCustomer;
         const modal = document.getElementById('report-issue-modal');
         const orderId = modal.getAttribute('data-issue-order');
         const photoBase64 = modal.getAttribute('data-issue-photo-base64');
+        
         if (!orderId || !photoBase64) return;
         
         const btn = document.querySelector('#photo-preview-container .primary-btn');
-        const originalText = btn.textContent; btn.textContent = 'Uploading...'; btn.disabled = true;
+        const originalText = btn.textContent;
+        btn.textContent = 'Uploading...';
+        btn.disabled = true;
 
         try {
+            // Send the photo securely to the backend for dispute resolution
             const token = localStorage.getItem('dailyPick_customerToken');
             const res = await fetch('https://dailypick-backend-production-05d6.up.railway.app/api/orders/report-issue', {
-                method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': token ? `Bearer ${token}` : '' }, body: JSON.stringify({ orderId, imageBase64: photoBase64 })
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': token ? `Bearer ${token}` : ''
+                },
+                body: JSON.stringify({ orderId, imageBase64: photoBase64 })
             });
+            
             const result = await res.json();
-            if (result.success || res.status === 404) {
+            if (result.success || res.status === 404) { // Assume success for UI even if backend route is pending
                 alert("Thank you. Our team has received the photo and will process your refund shortly.");
                 closeReportIssueModal();
-            } else { alert("Upload failed. Please try again."); }
-        } catch(e) { alert("Network error."); } finally { btn.textContent = originalText; btn.disabled = false; }
+            } else {
+                alert("Upload failed. Please try again.");
+            }
+        } catch(e) {
+            alert("Network error.");
+        } finally {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
     };
 
+    // 3. Hardware GPS Lock Override (Replaces slow HTML5 Geolocation with strict hardware sensors)
     const originalGetCurrentPosition = navigator.geolocation.getCurrentPosition;
     navigator.geolocation.getCurrentPosition = async function(success, error, options) {
         if (window.Capacitor && window.Capacitor.isNativePlatform()) {
@@ -1178,10 +1777,17 @@ window.logoutCustomer = logoutCustomer;
                 const permissions = await Geolocation.requestPermissions();
                 if (permissions.location === 'granted') {
                     const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true });
+                    // Map native payload back to HTML5 structure so existing code doesn't break
                     success({ coords: { latitude: position.coords.latitude, longitude: position.coords.longitude } });
-                } else { if (error) error(new Error("Location permission denied.")); }
-            } catch (e) { if (error) error(e); }
-        } else { return originalGetCurrentPosition.call(navigator.geolocation, success, error, options); }
+                } else {
+                    if (error) error(new Error("Location permission denied."));
+                }
+            } catch (e) {
+                if (error) error(e);
+            }
+        } else {
+            return originalGetCurrentPosition.call(navigator.geolocation, success, error, options);
+        }
     };
 })();
 
@@ -1189,11 +1795,30 @@ window.logoutCustomer = logoutCustomer;
 // --- NEW: PHASE 33 PINDUODUO PROTOCOL (MICRO-NEIGHBORHOOD GROUP BUYS) ---
 // ============================================================================
 (function() {
+    const BACKEND_URL = 'https://dailypick-backend-production-05d6.up.railway.app';
     let isJoiningCollective = false;
 
     const MOCK_COLLECTIVES = [
-        { _id: "COL_001", productName: "Aashirvaad Select Premium Sharbati Atta, 5 kg", originalPriceRs: 310, collectiveDiscountRs: 245, targetParticipants: 5, currentParticipants: 3, expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 14).toISOString(), dropoffAddress: "Society Main Gate" },
-        { _id: "COL_002", productName: "Maggi 2-Minute Instant Noodles, 12 Pack", originalPriceRs: 168, collectiveDiscountRs: 125, targetParticipants: 10, currentParticipants: 8, expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 4).toISOString(), dropoffAddress: "Society Main Gate" }
+        {
+            _id: "COL_001",
+            productName: "Aashirvaad Select Premium Sharbati Atta, 5 kg",
+            originalPriceRs: 310,
+            collectiveDiscountRs: 245,
+            targetParticipants: 5,
+            currentParticipants: 3,
+            expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 14).toISOString(), 
+            dropoffAddress: "Society Main Gate"
+        },
+        {
+            _id: "COL_002",
+            productName: "Maggi 2-Minute Instant Noodles, 12 Pack",
+            originalPriceRs: 168,
+            collectiveDiscountRs: 125,
+            targetParticipants: 10,
+            currentParticipants: 8,
+            expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 4).toISOString(), 
+            dropoffAddress: "Society Main Gate"
+        }
     ];
 
     function renderNeighborhoodDeals() {
@@ -1201,11 +1826,12 @@ window.logoutCustomer = logoutCustomer;
         if (!injectionPoint) return;
 
         const container = document.createElement('div');
+        
         const header = document.createElement('div');
-        header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 24px 16px 12px 16px;';
+        header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 0 16px 12px 16px;';
         header.innerHTML = `
             <h2 class="section-title" style="padding: 0; margin: 0;">Neighborhood Deals</h2>
-            <span style="background: linear-gradient(90deg, #ef4444, #f97316); color: white; border: none; font-size: 10px; font-weight: 800; padding: 4px 8px; border-radius: 8px; letter-spacing: 0.5px; box-shadow: 0 4px 10px rgba(239,68,68,0.3);">GROUP BUY</span>
+            <span style="background: #fee2e2; color: #ef4444; border: 1px solid #fecaca; font-size: 10px; font-weight: 800; padding: 4px 8px; border-radius: 12px; letter-spacing: 0.5px;">GROUP BUY</span>
         `;
         container.appendChild(header);
 
@@ -1215,17 +1841,25 @@ window.logoutCustomer = logoutCustomer;
         MOCK_COLLECTIVES.forEach(deal => {
             const pct = (deal.currentParticipants / deal.targetParticipants) * 100;
             const remaining = deal.targetParticipants - deal.currentParticipants;
+            
             const card = document.createElement('div');
             card.className = 'collective-card';
             
             card.innerHTML = `
                 <span class="collective-badge">Ends in <span class="countdown-timer" data-expires="${deal.expiresAt}">--:--</span></span>
                 <h3 class="collective-title">${deal.productName}</h3>
-                <p class="collective-price">₹${deal.collectiveDiscountRs} <span>₹${deal.originalPriceRs}</span></p>
-                <div class="collective-progress-bg"><div class="collective-progress-bar" style="width: ${pct}%"></div></div>
-                <div class="collective-meta"><span>${deal.currentParticipants} joined</span><span>Need ${remaining} more</span></div>
+                <p class="collective-price">Rs ${deal.collectiveDiscountRs} <span>Rs ${deal.originalPriceRs}</span></p>
+                
+                <div class="collective-progress-bg">
+                    <div class="collective-progress-bar" style="width: ${pct}%"></div>
+                </div>
+                <div class="collective-meta">
+                    <span>${deal.currentParticipants} joined</span>
+                    <span>Need ${remaining} more</span>
+                </div>
+                
                 <button class="collective-btn" onclick="joinCollective('${deal._id}', ${deal.collectiveDiscountRs})">
-                    🛒 Lock in ₹${deal.collectiveDiscountRs}
+                    🛒 Lock in Rs ${deal.collectiveDiscountRs}
                 </button>
             `;
             carousel.appendChild(card);
@@ -1233,14 +1867,22 @@ window.logoutCustomer = logoutCustomer;
 
         container.appendChild(carousel);
         injectionPoint.appendChild(container);
+
         startCountdowns();
     }
 
     function startCountdowns() {
         setInterval(() => {
             document.querySelectorAll('.countdown-timer').forEach(el => {
-                const distance = new Date(el.getAttribute('data-expires')).getTime() - new Date().getTime();
-                if (distance < 0) { el.textContent = "EXPIRED"; return; }
+                const expiresAt = new Date(el.getAttribute('data-expires')).getTime();
+                const now = new Date().getTime();
+                const distance = expiresAt - now;
+
+                if (distance < 0) {
+                    el.textContent = "EXPIRED";
+                    return;
+                }
+
                 const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                 const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
                 el.textContent = `${hours}h ${minutes}m`;
@@ -1254,18 +1896,34 @@ window.logoutCustomer = logoutCustomer;
         if (!token) return window.openCustomerLogin();
 
         isJoiningCollective = true;
-        if (typeof Razorpay === 'undefined') { alert("Payment gateway loading. Try again."); isJoiningCollective = false; return; }
+
+        if (typeof Razorpay === 'undefined') {
+            alert("Payment gateway loading. Try again.");
+            isJoiningCollective = false;
+            return;
+        }
 
         var options = {
-            "key": "rzp_test_dummykey", "amount": amountRs * 100, "currency": "INR", "name": "DailyPick Collectives",
+            "key": "rzp_test_dummykey", 
+            "amount": amountRs * 100, 
+            "currency": "INR",
+            "name": "DailyPick Collectives",
             "description": `Group Buy Authorization Lock`,
-            "handler": async function (response) { alert(`Success! You have joined the Group Buy. You will only be charged when the threshold is hit.`); isJoiningCollective = false; },
-            "theme": { "color": "#4F46E5" } 
+            "handler": async function (response) {
+                alert(`Success! You have joined the Group Buy. You will only be charged when the threshold is hit.`);
+                isJoiningCollective = false;
+            },
+            "theme": { "color": "#16a34a" } 
         };
         var rzp1 = new Razorpay(options);
-        rzp1.on('payment.failed', function (response){ alert('Authorization Failed'); isJoiningCollective = false; });
+        rzp1.on('payment.failed', function (response){
+            alert('Authorization Failed');
+            isJoiningCollective = false;
+        });
         rzp1.open();
     };
 
-    document.addEventListener('DOMContentLoaded', () => { setTimeout(renderNeighborhoodDeals, 500); });
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(renderNeighborhoodDeals, 500);
+    });
 })();
