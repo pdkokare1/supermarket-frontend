@@ -27,10 +27,10 @@
             min-width: 280px; 
             background: var(--surface, #ffffff); 
             border: 1px solid #e2e8f0;
-            border-radius: 16px; 
-            padding: 16px; 
+            border-radius: 20px; 
+            padding: 20px; 
             color: var(--text-main, #0f172a); 
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); 
+            box-shadow: 0 8px 24px rgba(149, 157, 165, 0.08); 
             flex-shrink: 0; 
             position: relative;
             overflow: hidden;
@@ -45,14 +45,14 @@
             z-index: 0;
             pointer-events: none;
         }
-        .collective-badge { background: #fee2e2; color: #ef4444; border: 1px solid #fecaca; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; display: inline-block; margin-bottom: 8px; position: relative; z-index: 1; }
-        .collective-title { font-size: 14px; font-weight: 700; margin: 0 0 6px 0; position: relative; z-index: 1; line-height: 1.3; }
-        .collective-price { font-size: 20px; font-weight: 800; color: var(--primary, #16a34a); margin: 0 0 12px 0; position: relative; z-index: 1; }
-        .collective-price span { font-size: 12px; text-decoration: line-through; color: #94a3b8; font-weight: 600; margin-left: 6px; }
-        .collective-progress-bg { background: #f1f5f9; height: 6px; border-radius: 4px; overflow: hidden; margin-bottom: 8px; position: relative; z-index: 1; }
-        .collective-progress-bar { background: #f97316; height: 100%; border-radius: 4px; transition: width 0.3s ease; }
-        .collective-meta { display: flex; justify-content: space-between; font-size: 11px; color: #64748b; font-weight: 600; margin-bottom: 16px; position: relative; z-index: 1; }
-        .collective-btn { width: 100%; background: var(--primary, #16a34a); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 800; font-size: 14px; cursor: pointer; display: flex; justify-content: center; gap: 8px; align-items: center; position: relative; z-index: 1; box-shadow: 0 4px 10px rgba(22, 163, 74, 0.2); transition: transform 0.1s; }
+        .collective-badge { background: #fee2e2; color: #ef4444; border: 1px solid #fecaca; padding: 6px 10px; border-radius: 8px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; display: inline-block; margin-bottom: 12px; position: relative; z-index: 1; }
+        .collective-title { font-size: 15px; font-weight: 800; margin: 0 0 6px 0; position: relative; z-index: 1; line-height: 1.3; }
+        .collective-price { font-size: 22px; font-weight: 800; color: var(--accent, #F97316); margin: 0 0 16px 0; position: relative; z-index: 1; }
+        .collective-price span { font-size: 13px; text-decoration: line-through; color: #94a3b8; font-weight: 600; margin-left: 8px; }
+        .collective-progress-bg { background: #f1f5f9; height: 8px; border-radius: 100px; overflow: hidden; margin-bottom: 8px; position: relative; z-index: 1; }
+        .collective-progress-bar { background: var(--primary); height: 100%; border-radius: 100px; transition: width 0.3s ease; }
+        .collective-meta { display: flex; justify-content: space-between; font-size: 12px; color: #64748b; font-weight: 700; margin-bottom: 20px; position: relative; z-index: 1; }
+        .collective-btn { width: 100%; background: var(--primary, #4F46E5); color: white; border: none; padding: 14px; border-radius: 12px; font-weight: 800; font-size: 14px; cursor: pointer; display: flex; justify-content: center; gap: 8px; align-items: center; position: relative; z-index: 1; box-shadow: 0 6px 15px rgba(79, 70, 229, 0.25); transition: transform 0.1s; }
         .collective-btn:active { transform: scale(0.98); }
         .collective-btn:disabled { background: #e2e8f0; color: #94a3b8; cursor: not-allowed; box-shadow: none; }
     </style>
@@ -93,20 +93,20 @@
     <article id="shop-view" class="view-section active">
         
         <section class="promo-banners">
-            <div class="promo-card" style="background: linear-gradient(135deg, #eab308, #d97706); color: white; cursor: pointer;" data-action="filter-tag" data-tag="promo-morning" data-title="Morning Fresh">
-                <p style="font-size: 10px; font-weight: 800; letter-spacing: 1px;">NEW ARRIVALS</p>
-                <h3 style="margin-top: 4px;">Morning Fresh</h3>
-                <p style="margin-top: auto; font-size: 11px;">✦ Shop Dairy ✦</p>
+            <div class="promo-card" style="background: linear-gradient(135deg, #F59E0B, #EA580C); color: white; cursor: pointer;" data-action="filter-tag" data-tag="promo-morning" data-title="Morning Fresh">
+                <p style="font-size: 11px; font-weight: 800; letter-spacing: 1px;">NEW ARRIVALS</p>
+                <h3 style="margin-top: 6px; font-size: 20px;">Morning Fresh</h3>
+                <p style="margin-top: auto; font-size: 12px; font-weight: 600;">✦ Shop Dairy ✦</p>
             </div>
-            <div class="promo-card" style="background: linear-gradient(135deg, #065f46, #047857); color: white; cursor: pointer;" data-action="filter-tag" data-tag="promo-snack" data-title="Snack Party">
-                <p style="font-size: 10px; font-weight: 800;">WEEKEND SPECIAL</p>
-                <h3 style="margin-top: 4px;">Snack Party</h3>
-                <p style="margin-top: auto; font-size: 11px;">✦ Munchies ✦</p>
+            <div class="promo-card" style="background: linear-gradient(135deg, #0D9488, #047857); color: white; cursor: pointer;" data-action="filter-tag" data-tag="promo-snack" data-title="Snack Party">
+                <p style="font-size: 11px; font-weight: 800;">WEEKEND SPECIAL</p>
+                <h3 style="margin-top: 6px; font-size: 20px;">Snack Party</h3>
+                <p style="margin-top: auto; font-size: 12px; font-weight: 600;">✦ Munchies ✦</p>
             </div>
-            <div class="promo-card" style="background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e; cursor: pointer;" data-action="filter-tag" data-tag="promo-summer" data-title="Summer Coolers">
-                <p style="font-size: 10px; font-weight: 800;">FEATURED</p>
-                <h3 style="margin-top: 4px;">Summer Coolers</h3>
-                <p style="margin-top: auto; font-size: 11px;">✦ Refreshing ✦</p>
+            <div class="promo-card" style="background: linear-gradient(135deg, #DBEAFE, #BFDBFE); color: #1E3A8A; cursor: pointer;" data-action="filter-tag" data-tag="promo-summer" data-title="Summer Coolers">
+                <p style="font-size: 11px; font-weight: 800;">FEATURED</p>
+                <h3 style="margin-top: 6px; font-size: 20px;">Summer Coolers</h3>
+                <p style="margin-top: auto; font-size: 12px; font-weight: 600;">✦ Refreshing ✦</p>
             </div>
         </section>
 
@@ -122,15 +122,15 @@
         <section class="products-section">
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 16px;">
                 <h2 class="section-title" id="product-grid-title" style="margin: 0;">All Products</h2>
-                <button id="btn-view-all" style="background: none; border: none; color: var(--primary); font-weight: 700; font-size: 12px; cursor: pointer;" aria-label="View all products">View All</button>
+                <button id="btn-view-all" style="background: none; border: none; color: var(--primary); font-weight: 800; font-size: 13px; cursor: pointer;" aria-label="View all products">View All</button>
             </div>
             
             <!-- --- NEW: PHASE 3 STORE-IN-STORE BRANDING BANNER --- -->
             <div id="partner-brand-banner" class="partner-brand-banner hidden">
                 <div class="partner-brand-logo" id="partner-brand-logo">🏪</div>
                 <div>
-                    <h2 id="partner-brand-name" style="margin: 0; font-size: 18px; font-weight: 800;">Partner Store</h2>
-                    <p style="margin: 4px 0 0 0; font-size: 12px; opacity: 0.9;">Official DailyPick Fulfillment Partner</p>
+                    <h2 id="partner-brand-name" style="margin: 0; font-size: 20px; font-weight: 800;">Partner Store</h2>
+                    <p style="margin: 4px 0 0 0; font-size: 13px; opacity: 0.9;">Official DailyPick Fulfillment Partner</p>
                 </div>
             </div>
 
@@ -156,12 +156,18 @@
         </main>
     </article>
 
+    <!-- --- UPDATED: FLOATING PILL CART RIBBON --- -->
     <div id="cart-ribbon" class="cart-ribbon hidden">
-        <div class="ribbon-info">
-            <span id="ribbon-items-count" class="ribbon-qty">1 ITEM</span>
-            <span id="ribbon-total-price" class="ribbon-price">Rs 0</span>
+        <div class="ribbon-left-cluster">
+            <div id="ribbon-thumbnails" class="ribbon-thumbnails">
+                <!-- Tiny overlapping images injected here via JS -->
+            </div>
+            <div class="ribbon-info">
+                <span id="ribbon-items-count" class="ribbon-qty">1 ITEM</span>
+                <span id="ribbon-total-price" class="ribbon-price">Rs 0</span>
+            </div>
         </div>
-        <div class="ribbon-action">View Cart <span>▶</span></div>
+        <div class="ribbon-action">View Cart <span style="background: white; color: var(--primary); border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 10px;">▶</span></div>
     </div>
 
     <section id="cart-view" class="cart-view">
@@ -201,25 +207,25 @@
             <textarea id="cust-address" class="delivery-input" placeholder="Complete Address (Flat, Building, Street)" rows="2" required aria-label="Complete Address"></textarea>
         </div>
 
-        <div id="smart-cart-upsells-container" class="hidden" style="padding: 16px; background: #f8fafc; border-top: 1px solid #e2e8f0; margin-bottom: 16px;">
-            <h3 style="font-size: 13px; font-weight: 800; color: #0f172a; margin-top: 0; margin-bottom: 12px;">Frequently Bought Together 🔥</h3>
-            <div id="smart-cart-upsells-list" style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: none;">
+        <div id="smart-cart-upsells-container" class="hidden" style="padding: 20px; background: var(--surface); border-top: 1px solid #e2e8f0; margin-top: 8px;">
+            <h3 style="font-size: 15px; font-weight: 800; color: #0f172a; margin-top: 0; margin-bottom: 16px;">Frequently Bought Together 🔥</h3>
+            <div id="smart-cart-upsells-list" style="display: flex; gap: 16px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: none;">
                 </div>
         </div>
 
         <div class="cart-footer">
-            <div id="loyalty-wallet-container" class="hidden" style="background: #f0fdf4; padding: 12px; border-radius: 8px; border: 1px solid #bbf7d0; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+            <div id="loyalty-wallet-container" class="hidden" style="background: #f0fdf4; padding: 16px; border-radius: 16px; border: 1px solid #bbf7d0; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <p style="margin: 0; font-size: 13px; font-weight: 800; color: #166534;">🌟 Super Wallet</p>
-                    <p style="margin: 2px 0 0 0; font-size: 11px; color: #15803d;">Available: <span id="loyalty-balance-display">Rs 0</span></p>
+                    <p style="margin: 0; font-size: 14px; font-weight: 800; color: #166534;">🌟 Super Wallet</p>
+                    <p style="margin: 2px 0 0 0; font-size: 12px; color: #15803d; font-weight: 600;">Available: <span id="loyalty-balance-display">Rs 0</span></p>
                 </div>
-                <input type="checkbox" id="use-loyalty-toggle" onchange="toggleLoyaltyPoints()" style="width: 20px; height: 20px; cursor: pointer; accent-color: #16a34a;">
+                <input type="checkbox" id="use-loyalty-toggle" onchange="toggleLoyaltyPoints()" style="width: 24px; height: 24px; cursor: pointer; accent-color: #16a34a;">
             </div>
 
-            <div class="summary-row"><span>Subtotal</span><span id="cart-subtotal">Rs 0</span></div>
-            <div class="summary-row"><span>Delivery</span><span id="cart-delivery">Rs 20</span></div>
+            <div class="summary-row"><span>Subtotal</span><span id="cart-subtotal" style="color: var(--text-main);">Rs 0</span></div>
+            <div class="summary-row"><span>Delivery</span><span id="cart-delivery" style="color: var(--text-main);">Rs 20</span></div>
             
-            <div class="summary-row hidden" id="loyalty-discount-row" style="color: #16a34a; font-weight: 700;"><span>Wallet Discount</span><span id="cart-loyalty-discount">-Rs 0</span></div>
+            <div class="summary-row hidden" id="loyalty-discount-row" style="color: #16a34a; font-weight: 800;"><span>Wallet Discount</span><span id="cart-loyalty-discount">-Rs 0</span></div>
             
             <hr class="summary-divider">
             <div class="summary-row total-row"><span>To Pay</span><span id="cart-total">Rs 0</span></div>
@@ -227,60 +233,60 @@
         </div>
     </section>
 
-    <div id="isolation-modal" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
-        <div style="background: white; padding: 24px; border-radius: 16px; width: 90%; max-width: 320px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
-            <div style="font-size: 40px; margin-bottom: 12px;">🛒</div>
-            <h3 style="margin-top: 0; color: #0f172a;">Change Store?</h3>
-            <p style="color: #64748B; font-size: 14px; margin: 12px 0 24px; line-height: 1.5;">Your cart contains items from a different partner. You can only checkout from one store at a time. Clear your cart to add this item?</p>
+    <div id="isolation-modal" class="hidden" style="position: fixed; inset: 0; background: rgba(15,23,42,0.8); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+        <div style="background: white; padding: 32px 24px; border-radius: 24px; width: 90%; max-width: 320px; text-align: center; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);">
+            <div style="font-size: 48px; margin-bottom: 16px;">🛒</div>
+            <h3 style="margin-top: 0; color: #0f172a; font-size: 20px; font-weight: 800;">Change Store?</h3>
+            <p style="color: #64748B; font-size: 14px; margin: 12px 0 32px; line-height: 1.5; font-weight: 500;">Your cart contains items from a different partner. Clear your cart to add this item?</p>
             <div style="display: flex; gap: 12px;">
-                <button onclick="cancelClearCart()" style="flex: 1; padding: 12px; border: 1px solid #E2E8F0; background: white; color: #64748B; border-radius: 8px; font-weight: 600; cursor: pointer;">Cancel</button>
-                <button onclick="confirmClearCart()" style="flex: 1; padding: 12px; border: none; background: #ea580c; color: white; border-radius: 8px; font-weight: 600; cursor: pointer;">Clear & Add</button>
+                <button onclick="cancelClearCart()" style="flex: 1; padding: 14px; border: 1px solid #E2E8F0; background: white; color: #64748B; border-radius: 12px; font-weight: 700; cursor: pointer;">Cancel</button>
+                <button onclick="confirmClearCart()" style="flex: 1; padding: 14px; border: none; background: #ef4444; color: white; border-radius: 12px; font-weight: 800; cursor: pointer;">Clear & Add</button>
             </div>
         </div>
     </div>
 
-    <div id="customer-login-modal" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
-        <div style="background: white; padding: 24px; border-radius: 16px; width: 90%; max-width: 360px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <h3 style="margin: 0; color: #0f172a; font-weight: 800;">Login / Sign Up</h3>
-                <button onclick="closeCustomerLogin()" style="background: none; border: none; font-size: 20px; cursor: pointer;">✕</button>
+    <div id="customer-login-modal" class="hidden" style="position: fixed; inset: 0; background: rgba(15,23,42,0.8); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+        <div style="background: white; padding: 24px; border-radius: 24px; width: 90%; max-width: 360px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0; color: #0f172a; font-weight: 800; font-size: 20px;">Login / Sign Up</h3>
+                <button onclick="closeCustomerLogin()" style="background: #f1f5f9; border: none; font-size: 16px; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #475569;">✕</button>
             </div>
             
             <div id="auth-step-1">
-                <p style="color: #64748B; font-size: 14px; margin-bottom: 16px;">Enter your phone number to receive a secure OTP.</p>
-                <input type="tel" id="auth-phone-input" placeholder="+91 9876543210" style="width: 100%; padding: 12px; margin-bottom: 16px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 16px; font-weight: 600;">
-                <div id="recaptcha-container" style="margin-bottom: 16px; display: flex; justify-content: center;"></div>
-                <button onclick="requestOTP()" id="btn-request-otp" style="width: 100%; padding: 14px; background: #ea580c; color: white; border: none; border-radius: 8px; font-weight: 800; cursor: pointer;">Send OTP</button>
+                <p style="color: #64748B; font-size: 14px; margin-bottom: 20px; font-weight: 500;">Enter your phone number to receive a secure OTP.</p>
+                <input type="tel" id="auth-phone-input" placeholder="+91 9876543210" style="width: 100%; padding: 16px; margin-bottom: 20px; border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 12px; box-sizing: border-box; font-size: 16px; font-weight: 700; color: #0f172a; outline: none;">
+                <div id="recaptcha-container" style="margin-bottom: 20px; display: flex; justify-content: center;"></div>
+                <button onclick="requestOTP()" id="btn-request-otp" style="width: 100%; padding: 16px; background: var(--primary); color: white; border: none; border-radius: 12px; font-weight: 800; font-size: 16px; cursor: pointer; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);">Send OTP</button>
             </div>
 
             <div id="auth-step-2" class="hidden">
-                <p style="color: #64748B; font-size: 14px; margin-bottom: 16px;">Enter the 6-digit code sent to your phone.</p>
-                <input type="text" id="auth-otp-input" placeholder="000000" maxlength="6" style="width: 100%; padding: 12px; margin-bottom: 16px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 24px; letter-spacing: 4px; text-align: center; font-weight: 800;">
-                <button onclick="verifyOTP()" id="btn-verify-otp" style="width: 100%; padding: 14px; background: #10b981; color: white; border: none; border-radius: 8px; font-weight: 800; cursor: pointer;">Verify & Login</button>
-                <button onclick="resetAuth()" style="width: 100%; padding: 12px; background: none; color: #64748B; border: none; margin-top: 8px; cursor: pointer; font-weight: 600;">Change Number</button>
+                <p style="color: #64748B; font-size: 14px; margin-bottom: 20px; font-weight: 500;">Enter the 6-digit code sent to your phone.</p>
+                <input type="text" id="auth-otp-input" placeholder="000000" maxlength="6" style="width: 100%; padding: 16px; margin-bottom: 20px; border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 12px; box-sizing: border-box; font-size: 28px; letter-spacing: 8px; text-align: center; font-weight: 800; color: #0f172a; outline: none;">
+                <button onclick="verifyOTP()" id="btn-verify-otp" style="width: 100%; padding: 16px; background: #16a34a; color: white; border: none; border-radius: 12px; font-weight: 800; font-size: 16px; cursor: pointer; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2);">Verify & Login</button>
+                <button onclick="resetAuth()" style="width: 100%; padding: 16px; background: none; color: #64748B; border: none; margin-top: 8px; cursor: pointer; font-weight: 700;">Change Number</button>
             </div>
         </div>
     </div>
 
-    <div id="customer-rating-modal" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(2px);">
-        <div style="background: white; padding: 24px; border-radius: 16px; width: 90%; max-width: 320px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
-            <div style="font-size: 40px; margin-bottom: 12px;">⭐</div>
-            <h3 style="margin-top: 0; color: #0f172a;">Rate Your Delivery</h3>
-            <p style="color: #64748B; font-size: 14px; margin: 12px 0 24px; line-height: 1.5;">How was your DailyPick experience today?</p>
-            <div style="display: flex; justify-content: center; gap: 8px;">
-                <button onclick="submitOrderRating(1)" style="font-size: 24px; background: none; border: none; cursor: pointer;">⭐</button>
-                <button onclick="submitOrderRating(2)" style="font-size: 24px; background: none; border: none; cursor: pointer;">⭐</button>
-                <button onclick="submitOrderRating(3)" style="font-size: 24px; background: none; border: none; cursor: pointer;">⭐</button>
-                <button onclick="submitOrderRating(4)" style="font-size: 24px; background: none; border: none; cursor: pointer;">⭐</button>
-                <button onclick="submitOrderRating(5)" style="font-size: 24px; background: none; border: none; cursor: pointer;">⭐</button>
+    <div id="customer-rating-modal" class="hidden" style="position: fixed; inset: 0; background: rgba(15,23,42,0.8); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+        <div style="background: white; padding: 32px 24px; border-radius: 24px; width: 90%; max-width: 320px; text-align: center; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);">
+            <div style="font-size: 56px; margin-bottom: 16px;">⭐</div>
+            <h3 style="margin-top: 0; color: #0f172a; font-size: 20px; font-weight: 800;">Rate Your Delivery</h3>
+            <p style="color: #64748B; font-size: 14px; margin: 12px 0 32px; line-height: 1.5; font-weight: 500;">How was your DailyPick experience today?</p>
+            <div style="display: flex; justify-content: center; gap: 12px;">
+                <button onclick="submitOrderRating(1)" style="font-size: 28px; background: none; border: none; cursor: pointer; transition: transform 0.1s;">⭐</button>
+                <button onclick="submitOrderRating(2)" style="font-size: 28px; background: none; border: none; cursor: pointer; transition: transform 0.1s;">⭐</button>
+                <button onclick="submitOrderRating(3)" style="font-size: 28px; background: none; border: none; cursor: pointer; transition: transform 0.1s;">⭐</button>
+                <button onclick="submitOrderRating(4)" style="font-size: 28px; background: none; border: none; cursor: pointer; transition: transform 0.1s;">⭐</button>
+                <button onclick="submitOrderRating(5)" style="font-size: 28px; background: none; border: none; cursor: pointer; transition: transform 0.1s;">⭐</button>
             </div>
-            <button onclick="document.getElementById('customer-rating-modal').classList.add('hidden')" style="margin-top: 24px; width: 100%; padding: 12px; background: #e2e8f0; color: #475569; border: none; border-radius: 8px; font-weight: 800; cursor: pointer;">Skip</button>
+            <button onclick="document.getElementById('customer-rating-modal').classList.add('hidden')" style="margin-top: 32px; width: 100%; padding: 14px; background: #f1f5f9; color: #475569; border: none; border-radius: 12px; font-weight: 800; cursor: pointer;">Skip</button>
         </div>
     </div>
 
-    <div id="omni-cart-split-banner" class="hidden" style="background: #eef2ff; padding: 12px; margin-bottom: 16px; border-radius: 8px; border: 1px solid #cbd5e1;">
-        <p style="font-size: 12px; font-weight: 800; color: #334155; margin: 0;"><i data-lucide="info" class="icon-sm"></i> Omni-Cart Active</p>
-        <p style="font-size: 11px; color: #475569; margin: 4px 0 0 0;">Your cart contains items from multiple fulfillment zones. Delivery speeds may vary.</p>
+    <div id="omni-cart-split-banner" class="hidden" style="background: #eef2ff; padding: 16px; margin-bottom: 20px; border-radius: 16px; border: 1px solid #c7d2fe;">
+        <p style="font-size: 13px; font-weight: 800; color: var(--primary); margin: 0; display: flex; align-items: center; gap: 6px;">ℹ️ Omni-Cart Active</p>
+        <p style="font-size: 12px; color: #475569; margin: 6px 0 0 0; font-weight: 500; line-height: 1.4;">Your cart contains items from multiple fulfillment zones. Delivery speeds may vary.</p>
     </div>
 
     <div id="toast-container"></div>
@@ -299,22 +305,22 @@
 
     <!-- UI ANCHORS -->
     <style>
-        .discovery-carousel { display: flex; gap: 12px; overflow-x: auto; padding: 10px 16px; scrollbar-width: none; }
+        .discovery-carousel { display: flex; gap: 16px; overflow-x: auto; padding: 10px 16px 20px 16px; scrollbar-width: none; }
         .discovery-carousel::-webkit-scrollbar { display: none; }
-        .discovery-card { min-width: 240px; background: white; border-radius: 12px; padding: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; cursor: pointer; flex-shrink: 0; }
-        .discovery-title { font-size: 14px; font-weight: 800; color: #0f172a; margin: 0 0 4px 0; }
-        .discovery-meta { font-size: 11px; color: #64748b; margin: 0; font-weight: 600; }
-        .discovery-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; margin-top: 8px; }
-        .badge-enterprise { background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }
-        .badge-quick { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+        .discovery-card { min-width: 240px; background: white; border-radius: 16px; padding: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); border: 1px solid #f1f5f9; cursor: pointer; flex-shrink: 0; }
+        .discovery-title { font-size: 15px; font-weight: 800; color: #0f172a; margin: 0 0 6px 0; }
+        .discovery-meta { font-size: 12px; color: #64748b; margin: 0; font-weight: 600; }
+        .discovery-badge { display: inline-block; padding: 6px 10px; border-radius: 6px; font-size: 10px; font-weight: 800; margin-top: 12px; text-transform: uppercase; letter-spacing: 0.5px;}
+        .badge-enterprise { background: #eff6ff; color: #1d4ed8; }
+        .badge-quick { background: #f0fdf4; color: #15803d; }
     </style>
     
     <div id="discovery-injection-point" style="display: none;">
         <section id="discovery-section" style="margin-bottom: 24px;">
             <div style="padding: 0 16px; display: flex; justify-content: space-between; align-items: flex-end;">
                 <div>
-                    <h2 class="section-title" style="margin: 0;">Stores Near You</h2>
-                    <p style="font-size: 12px; color: #64748b; margin: 2px 0 0 0;">Omni-Cart Compatible</p>
+                    <h2 class="section-title" style="margin: 0; padding-bottom: 0;">Stores Near You</h2>
+                    <p style="font-size: 12px; font-weight: 600; color: var(--primary); margin: 4px 0 0 0;">Omni-Cart Compatible</p>
                 </div>
             </div>
             <div id="discovery-lists-container"></div>
@@ -325,26 +331,23 @@
     <!-- NEW: PHASE 16 CAPACITOR NATIVE UI POLISH & CAMERA MODAL                      -->
     <!-- ============================================================================ -->
     <style id="native-app-styles">
-        /* Disable Web Behaviors to feel like a true Native App */
         body {
             user-select: none;
             -webkit-user-select: none;
             -webkit-touch-callout: none;
             overscroll-behavior-y: none;
-            /* Support for iPhone Dynamic Island and Android Notches */
             padding-top: env(safe-area-inset-top);
             padding-bottom: env(safe-area-inset-bottom);
         }
         
-        /* Convert cart view to a native Bottom Sheet */
         .cart-view.active {
-            animation: slideUpBottomSheet 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-            border-top-left-radius: 24px;
-            border-top-right-radius: 24px;
-            box-shadow: 0 -10px 40px rgba(0,0,0,0.15);
+            animation: slideUpBottomSheet 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            border-top-left-radius: 32px;
+            border-top-right-radius: 32px;
+            box-shadow: 0 -10px 50px rgba(0,0,0,0.15);
             top: auto;
             bottom: 0;
-            height: 90vh;
+            height: 92vh;
         }
 
         @keyframes slideUpBottomSheet {
@@ -353,28 +356,27 @@
         }
 
         .bottom-sheet-handle {
-            width: 40px; height: 5px; background: #cbd5e1; border-radius: 10px; margin: 12px auto;
+            width: 48px; height: 6px; background: #e2e8f0; border-radius: 10px; margin: 16px auto;
         }
     </style>
 
-    <div id="report-issue-modal" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9999; display: flex; align-items: flex-end; justify-content: center; backdrop-filter: blur(2px);">
-        <div style="background: white; padding: 24px; border-top-left-radius: 24px; border-top-right-radius: 24px; width: 100%; max-width: 500px; box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.1); animation: slideUpBottomSheet 0.3s forwards;">
+    <div id="report-issue-modal" class="hidden" style="position: fixed; inset: 0; background: rgba(15,23,42,0.8); z-index: 9999; display: flex; align-items: flex-end; justify-content: center; backdrop-filter: blur(4px);">
+        <div style="background: white; padding: 24px; border-top-left-radius: 32px; border-top-right-radius: 32px; width: 100%; max-width: 500px; box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.15); animation: slideUpBottomSheet 0.3s forwards;">
             <div class="bottom-sheet-handle"></div>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <h3 style="margin: 0; color: #0f172a; font-weight: 800;">Report Damaged Item</h3>
-                <button onclick="closeReportIssueModal()" style="background: none; border: none; font-size: 20px; cursor: pointer;">✕</button>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0; color: #0f172a; font-weight: 800; font-size: 20px;">Report Damaged Item</h3>
+                <button onclick="closeReportIssueModal()" style="background: #f1f5f9; border: none; font-size: 16px; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #475569;">✕</button>
             </div>
-            <p style="color: #64748B; font-size: 14px; margin-bottom: 24px;">Please take a clear picture of the damaged or missing item so our support team can process your refund instantly.</p>
+            <p style="color: #64748B; font-size: 14px; margin-bottom: 24px; font-weight: 500; line-height: 1.5;">Please take a clear picture of the damaged or missing item so our support team can process your refund instantly.</p>
             
-            <!-- This triggers the Native Capacitor Camera Bridge in app.js -->
-            <button onclick="triggerNativeCamera()" style="width: 100%; padding: 16px; background: #3b82f6; color: white; border: none; border-radius: 12px; font-weight: 800; font-size: 16px; cursor: pointer; margin-bottom: 12px;">📸 Open Camera</button>
+            <button onclick="triggerNativeCamera()" style="width: 100%; padding: 18px; background: var(--primary); color: white; border: none; border-radius: 16px; font-weight: 800; font-size: 16px; cursor: pointer; margin-bottom: 12px; box-shadow: 0 6px 15px rgba(79, 70, 229, 0.25);">📸 Open Camera</button>
             
             <input type="file" id="fallback-file-upload" accept="image/*" class="hidden" onchange="handleFallbackPhotoUpload(event)">
-            <button onclick="document.getElementById('fallback-file-upload').click()" style="width: 100%; padding: 16px; background: #f1f5f9; color: #334155; border: none; border-radius: 12px; font-weight: 800; font-size: 16px; cursor: pointer;">📂 Choose from Gallery</button>
+            <button onclick="document.getElementById('fallback-file-upload').click()" style="width: 100%; padding: 18px; background: #f8fafc; color: var(--text-main); border: 1px solid #e2e8f0; border-radius: 16px; font-weight: 800; font-size: 16px; cursor: pointer;">📂 Choose from Gallery</button>
             
-            <div id="photo-preview-container" class="hidden" style="margin-top: 24px; text-align: center;">
-                <img id="issue-photo-preview" src="" style="max-width: 100%; height: 200px; object-fit: cover; border-radius: 12px; margin-bottom: 16px;">
-                <button class="primary-btn" onclick="submitIssueReport()" style="background: #10b981;">Submit Report</button>
+            <div id="photo-preview-container" class="hidden" style="margin-top: 32px; text-align: center;">
+                <img id="issue-photo-preview" src="" style="max-width: 100%; height: 200px; object-fit: cover; border-radius: 16px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
+                <button class="primary-btn" onclick="submitIssueReport()">Submit Report</button>
             </div>
         </div>
     </div>
