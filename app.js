@@ -50,12 +50,12 @@ const navBtns = {
 
 // --- NEW: PHASE 34 RICH CATEGORY STYLING (Zepto Mimic) ---
 const CATEGORY_IMAGES = {
-    'Dairy & Breakfast': { emoji: '🥛', color: '#ecfdf5', sub: 'UP TO 15% OFF' }, // Greenish
-    'Snacks & Munchies': { emoji: '🍿', color: '#fff7ed', sub: 'STARTS AT Rs19' }, // Orangish
-    'Cold Drinks & Juices': { emoji: '🥤', color: '#eff6ff', sub: 'UP TO 50% OFF' }, // Blueish
-    'Personal Care': { emoji: '🧴', color: '#fdf4ff', sub: 'UP TO 85% OFF' }, // Pinkish
-    'Cleaning Essentials': { emoji: '🧽', color: '#f8fafc', sub: 'UP TO 80% OFF' }, // Grayish
-    'Grocery & Kitchen': { emoji: '🌾', color: '#fefce8', sub: 'MEGA PACKS' }, // Yellowish
+    'Dairy & Breakfast': { emoji: '🥛', color: '#ecfdf5', sub: 'UP TO 15% OFF' }, 
+    'Snacks & Munchies': { emoji: '🍿', color: '#fff7ed', sub: 'STARTS AT ₹19' }, 
+    'Cold Drinks & Juices': { emoji: '🥤', color: '#eff6ff', sub: 'UP TO 50% OFF' }, 
+    'Personal Care': { emoji: '🧴', color: '#fdf4ff', sub: 'UP TO 85% OFF' }, 
+    'Cleaning Essentials': { emoji: '🧽', color: '#f8fafc', sub: 'UP TO 80% OFF' }, 
+    'Grocery & Kitchen': { emoji: '🌾', color: '#fefce8', sub: 'MEGA PACKS' }, 
     'Default': { emoji: '🛍️', color: '#f1f5f9', sub: 'EXPLORE' }
 };
 
@@ -265,41 +265,6 @@ async function fetchCategories() {
     }
 }
 
-async function fetchEnterprisePartners() {
-    try {
-        const res = await storeFetchWithAuth(`${BACKEND_URL}/api/stores?type=ENTERPRISE`);
-        const result = await res.json();
-        if (result.success && result.data && result.data.length > 0) {
-            // Keep logic but visual integration might not fit Zepto UI perfectly right now.
-        }
-    } catch(e) {}
-}
-
-async function openPriceCompare(sku, productName) {
-    if (!userLat || !userLng) {
-        showToast("Please allow location access to compare prices nearby.");
-        return;
-    }
-    
-    showToast("Scanning nearby stores...");
-    try {
-        const res = await storeFetchWithAuth(`${BACKEND_URL}/api/marketplace/compare?sku=${sku}&lat=${userLat}&lng=${userLng}`);
-        const result = await res.json();
-        
-        if (result.success && result.options.length > 0) {
-            let msg = `Best Prices for ${productName}:\n\n`;
-            result.options.slice(0, 3).forEach((opt, idx) => {
-                msg += `${idx === 0 ? '🏆' : '🏪'} ${opt.storeName}: Rs ${opt.bestPriceRs} (Rating: ${opt.rating})\n`;
-            });
-            alert(msg); 
-        } else {
-            showToast("No other stores nearby have this item.");
-        }
-    } catch (e) {
-        showToast("Price Engine unavailable.");
-    }
-}
-
 async function fetchProducts() { 
     try { 
         let url = `${BACKEND_URL}/api/products`;
@@ -313,7 +278,6 @@ async function fetchProducts() {
             skeletonGrid.classList.add('hidden'); 
             storefront.classList.remove('hidden'); 
             
-            // Phase 34: On initial load, try to build shelves
             buildHomeUI(allProducts);
         } 
     } catch(e) { 
@@ -325,7 +289,6 @@ async function fetchProducts() {
     } 
 }
 
-// Helper to create a single product card DOM element
 function createProductCardNode(product, isHorizontalShelf = false) {
     const card = document.createElement('div'); 
     card.className = 'product-card'; 
@@ -349,7 +312,6 @@ function createProductCardNode(product, isHorizontalShelf = false) {
         imgContainer.appendChild(badge);
     }
 
-    // Mock "Mega Drop" tag for UI flavor
     if (isHorizontalShelf && Math.random() > 0.5) {
         const dBadge = document.createElement('div');
         dBadge.className = 'discount-tag';
@@ -392,11 +354,10 @@ function createProductCardNode(product, isHorizontalShelf = false) {
     
     const priceDiv = document.createElement('div');
     priceDiv.className = 'product-price';
-    priceDiv.textContent = `₹${displayVariant.price}`; // Using ₹ for authenticity
+    priceDiv.textContent = `₹${displayVariant.price}`; 
     
     priceBlock.appendChild(priceDiv);
     
-    // Add mock MRP
     if (isHorizontalShelf) {
         const mrpDiv = document.createElement('div');
         mrpDiv.className = 'product-mrp';
@@ -406,7 +367,7 @@ function createProductCardNode(product, isHorizontalShelf = false) {
 
     const actionContainer = document.createElement('div');
     actionContainer.className = 'action-container';
-    actionContainer.id = `action-container-${product._id}-${Math.random().toString(36).substr(2, 5)}`; // Unique ID for multiple instances
+    actionContainer.id = `action-container-${product._id}-${Math.random().toString(36).substr(2, 5)}`; 
     
     priceRow.appendChild(priceBlock);
     priceRow.appendChild(actionContainer);
@@ -414,7 +375,6 @@ function createProductCardNode(product, isHorizontalShelf = false) {
     card.appendChild(infoBlock);
     card.appendChild(priceRow);
 
-    // After appending to DOM, we need to bind the action UI
     setTimeout(() => {
         updateSpecificCardActionUI(product._id, actionContainer);
     }, 0);
@@ -422,7 +382,6 @@ function createProductCardNode(product, isHorizontalShelf = false) {
     return card;
 }
 
-// --- NEW: Phase 34 Rendering Engine ---
 function buildHomeUI(products) {
     document.getElementById('product-grid-title').textContent = 'All Products';
     document.getElementById('btn-view-all').classList.add('hidden');
@@ -430,21 +389,18 @@ function buildHomeUI(products) {
     collectivesPoint.classList.remove('hidden');
 
     if (products.length < 8) {
-        // Not enough products for shelves, just render flat
         megaDealsSection.classList.add('hidden');
         trendingSection.classList.add('hidden');
         renderFlatGrid(products);
         return;
     }
 
-    // Activate Shelves
     megaDealsSection.classList.remove('hidden');
     trendingSection.classList.remove('hidden');
     
     megaDealsShelf.innerHTML = '';
     trendingShelf.innerHTML = '';
 
-    // Split array (mock logic for "Deals" and "Trending")
     const deals = products.slice(0, 5);
     const trending = products.slice(5, 10);
     const rest = products.slice(10);
@@ -470,9 +426,7 @@ function renderFlatGrid(productsToRender) {
     storefront.appendChild(fragment);
 }
 
-// Fallback for direct array passing (legacy support)
 function renderProducts(productsToRender) { 
-    // If we are filtering, kill the shelves and show everything in the flat grid
     megaDealsSection.classList.add('hidden');
     trendingSection.classList.add('hidden');
     categorySectionContainer.classList.add('hidden');
@@ -526,7 +480,6 @@ let handleSearch = async function(event) {
 
     clearTimeout(searchDebounceTimeout);
     searchDebounceTimeout = setTimeout(async () => {
-        // Try local search first for speed
         let searchTerms = rawQuery.split(' ');
         for (const [key, related] of Object.entries(commonSynonyms)) {
             if (rawQuery.includes(key)) searchTerms.push(...related);
@@ -550,7 +503,6 @@ let handleSearch = async function(event) {
             document.getElementById('product-grid-title').textContent = `Search Results`;
             renderProducts(scoredProducts);
         } else {
-            // Fallback to backend autocomplete if local fails
             try {
                 let url = `${BACKEND_URL}/api/products/autocomplete?q=${encodeURIComponent(rawQuery)}`;
                 if (userLat && userLng) url += `&lat=${userLat}&lng=${userLng}`;
@@ -612,7 +564,6 @@ function adjustQty(productId, change) {
     updateGlobalCartUI(); 
 }
 
-// Since a product can now exist in a shelf AND the main grid, we update all instances
 function updateAllActionUIs(productId) {
     document.querySelectorAll(`[id^="action-container-${productId}"]`).forEach(container => {
         updateSpecificCardActionUI(productId, container);
@@ -655,12 +606,10 @@ function updateSpecificCardActionUI(productId, container) {
     } 
 }
 
-// Phase 34: Floating Cart Pill UI Logic
 let updateGlobalCartUI = function() { 
     const totalItems = cart.reduce((s, i) => s + i.qty, 0); 
     const subtotal = cart.reduce((s, i) => s + (i.currentPrice * i.qty), 0); 
     
-    // Inject Overlapping Thumbnails
     const ribbonThumbnails = document.getElementById('ribbon-thumbnails');
     if (ribbonThumbnails) {
         ribbonThumbnails.innerHTML = '';
@@ -778,18 +727,8 @@ let updateGlobalCartUI = function() {
     const uniqueStoreIds = Object.keys(groupedCart).length;
     const dynamicDeliveryTotal = uniqueStoreIds === 0 ? 0 : (DELIVERY_FEE * uniqueStoreIds);
 
-    // Apply Loyalty if active
     let finalTotal = subtotal + dynamicDeliveryTotal;
     let discountApplied = 0;
-
-    if (isLoyaltyApplied && customerLoyaltyBalance > 0) {
-        discountApplied = Math.min(customerLoyaltyBalance, subtotal); 
-        finalTotal -= discountApplied;
-        document.getElementById('loyalty-discount-row').classList.remove('hidden');
-        document.getElementById('cart-loyalty-discount').textContent = `-₹${discountApplied}`;
-    } else {
-        document.getElementById('loyalty-discount-row').classList.add('hidden');
-    }
 
     document.getElementById('cart-subtotal').textContent = `₹${subtotal}`; 
     document.getElementById('cart-delivery').textContent = `₹${dynamicDeliveryTotal}`; 
@@ -849,9 +788,6 @@ async function placeOrder() {
     const totalDeliveryFee = DELIVERY_FEE * storeIds.length; 
     const grandSubtotal = cart.reduce((s, i) => s + (i.currentPrice * i.qty), 0); 
     let finalTotal = grandSubtotal + totalDeliveryFee; 
-    if (isLoyaltyApplied) finalTotal -= Math.min(customerLoyaltyBalance, grandSubtotal);
-    
-    const scheduleTime = selectedDeliveryType === 'Routine' ? document.getElementById('schedule-time').value : 'ASAP'; 
     
     const payloadCarts = storeIds.map(sId => ({
         storeId: sId === 'default' ? null : sId,
@@ -874,7 +810,7 @@ async function placeOrder() {
                 body: JSON.stringify({
                     customerName: name, customerPhone: phone, deliveryAddress: address, 
                     carts: payloadCarts, notes: finalNotes, paymentMethod: selectedPaymentMethod,
-                    transactionId: transactionId, useLoyaltyPoints: isLoyaltyApplied
+                    transactionId: transactionId
                 }) 
             }); 
             
@@ -1073,39 +1009,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeLocationAndFetch();
 });
 
-let customerLoyaltyBalance = 0;
-let isLoyaltyApplied = false;
-
-const originalUpdateAuthUIPhase6 = updateAuthUI;
-updateAuthUI = async function() {
-    if (typeof originalUpdateAuthUIPhase6 === 'function') originalUpdateAuthUIPhase6();
-    
-    const token = localStorage.getItem('dailyPick_customerToken');
-    if (token) {
-        try {
-            const res = await storeFetchWithAuth(`${BACKEND_URL}/api/customers/me`);
-            const result = await res.json();
-            if (result.success && result.data) {
-                customerLoyaltyBalance = result.data.loyaltyPoints || 0;
-                if (customerLoyaltyBalance > 0) {
-                    document.getElementById('loyalty-wallet-container').classList.remove('hidden');
-                    document.getElementById('loyalty-balance-display').textContent = `₹${customerLoyaltyBalance}`;
-                }
-            }
-        } catch(e) {}
-    } else {
-        customerLoyaltyBalance = 0;
-        isLoyaltyApplied = false;
-        if(document.getElementById('use-loyalty-toggle')) document.getElementById('use-loyalty-toggle').checked = false;
-        if(document.getElementById('loyalty-wallet-container')) document.getElementById('loyalty-wallet-container').classList.add('hidden');
-    }
-};
-
-window.toggleLoyaltyPoints = function() {
-    isLoyaltyApplied = document.getElementById('use-loyalty-toggle').checked;
-    updateGlobalCartUI();
-};
-
 window.submitOrderRating = async function(score) {
     const modal = document.getElementById('customer-rating-modal');
     if (!modal) return;
@@ -1135,24 +1038,6 @@ document.addEventListener('visibilitychange', () => {
 let consumerLiveMap = null;
 let riderMarker = null;
 let consumerTrackingWS = null;
-
-const originalCheckOrderStatusPhase13 = checkOrderStatus;
-checkOrderStatus = async function() {
-    await originalCheckOrderStatusPhase13();
-    setTimeout(() => {
-        const content = document.getElementById('tracking-content');
-        if (!content) return;
-        if (content.innerHTML.includes('Dispatched') && !content.innerHTML.includes('live-rider-map')) {
-            const savedOrderId = localStorage.getItem('dailyPick_activeOrderId');
-            if(!savedOrderId) return;
-            if (typeof L === 'undefined') {
-                const leafletCss = document.createElement('link'); leafletCss.rel = 'stylesheet'; leafletCss.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(leafletCss);
-                const leafletJs = document.createElement('script'); leafletJs.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; document.head.appendChild(leafletJs);
-                leafletJs.onload = () => initializeLiveMap(savedOrderId);
-            } else { initializeLiveMap(savedOrderId); }
-        }
-    }, 800);
-};
 
 function initializeLiveMap(orderId) {
     const mapContainer = document.createElement('div');
@@ -1320,7 +1205,7 @@ window.logoutCustomer = logoutCustomer;
         header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 24px 16px 12px 16px;';
         header.innerHTML = `
             <h2 class="section-title" style="padding: 0; margin: 0;">Neighborhood Deals</h2>
-            <span style="background: #fee2e2; color: #ef4444; border: 1px solid #fecaca; font-size: 10px; font-weight: 800; padding: 4px 8px; border-radius: 8px; letter-spacing: 0.5px;">GROUP BUY</span>
+            <span style="background: linear-gradient(90deg, #ef4444, #f97316); color: white; border: none; font-size: 10px; font-weight: 800; padding: 4px 8px; border-radius: 8px; letter-spacing: 0.5px; box-shadow: 0 4px 10px rgba(239,68,68,0.3);">GROUP BUY</span>
         `;
         container.appendChild(header);
 
