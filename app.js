@@ -1076,6 +1076,8 @@ async function placeOrder() {
     const finalTotal = grandSubtotal + totalDeliveryFee; 
     const scheduleTime = selectedDeliveryType === 'Routine' ? document.getElementById('schedule-time').value : 'ASAP'; 
     
+    const idempotencyKey = 'OMNI-' + Date.now() + '-' + (window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : Math.random().toString(36).substring(2, 9));
+    
     const payloadCarts = storeIds.map(sId => ({
         storeId: sId === 'default' ? null : sId,
         items: groupedCart[sId].items,
@@ -1083,8 +1085,9 @@ async function placeOrder() {
         deliveryType: selectedDeliveryType 
     }));
 
-    const idempotencyKey = 'OMNI-' + Date.now() + '-' + (window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : Math.random().toString(36).substring(2, 9));
-    
+    // ENTERPRISE OPTIMIZATION: Ghost Order Recovery Flag
+    localStorage.setItem('dailyPick_pendingPayment', idempotencyKey);
+
     const finalizeBackendOrder = async (transactionId = null) => {
         try { 
             const res = await storeFetchWithAuth(`${BACKEND_URL}/api/orders/omni-checkout`, { 
@@ -1111,6 +1114,8 @@ async function placeOrder() {
                 localStorage.setItem('dailyPick_activeOrderId', result.splitShipmentGroupId || 'Group_Processing'); 
                 cart = []; 
                 localStorage.removeItem('dailyPick_cart'); // Clear persistence on success
+                localStorage.removeItem('dailyPick_pendingPayment'); // Clear ghost order flag on success
+                
                 document.getElementById('cust-name').value = ''; 
                 document.getElementById('cust-phone').value = ''; 
                 document.getElementById('cust-address').value = ''; 
@@ -1122,7 +1127,14 @@ async function placeOrder() {
                 switchView('orders'); 
                 showToast(`Omni-Cart Success! Split into ${result.totalShipments || storeIds.length} shipments. 🚀`); 
             } else {
-                showToast('Failed to place order: ' + result.message); 
+                // ENTERPRISE FIX: Catch 409 Inventory Conflicts and auto-refresh the UI safely
+                if (res.status === 409) {
+                    showToast('⚠️ Some items in your cart just sold out! Refreshing inventory...');
+                    localStorage.removeItem('dailyPick_pendingPayment');
+                    fetchProducts(); // Auto-refresh the storefront
+                } else {
+                    showToast('Failed to place order: ' + result.message); 
+                }
             }
         } catch(e) { 
             showToast('Network error.'); 
