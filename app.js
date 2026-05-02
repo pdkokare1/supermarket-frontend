@@ -129,7 +129,6 @@ function verifyOTP() {
         closeCustomerLogin();
         updateAuthUI();
         
-        // Broadcast token to native layer if running as app
         if (window.Capacitor && window.Capacitor.Plugins.PushNotifications) {
             window.registerNativePushToken(idToken);
         }
@@ -665,6 +664,28 @@ function updateCardActionUI(productId) {
 let updateGlobalCartUI = function() { 
     const totalItems = cart.reduce((s, i) => s + i.qty, 0); 
     const subtotal = cart.reduce((s, i) => s + (i.currentPrice * i.qty), 0); 
+    
+    // --- NEW: INJECTING THUMBNAILS INTO THE FLOATING CART RIBBON ---
+    const ribbonThumbnails = document.getElementById('ribbon-thumbnails');
+    if (ribbonThumbnails) {
+        ribbonThumbnails.innerHTML = '';
+        if (totalItems > 0) {
+            // Get up to 3 unique images
+            const uniqueImages = [...new Set(cart.map(i => i.imageUrl).filter(Boolean))].slice(0, 3);
+            uniqueImages.forEach(imgUrl => {
+                const img = document.createElement('img');
+                img.src = optimizeCloudinaryUrl(imgUrl, 50);
+                ribbonThumbnails.appendChild(img);
+            });
+            // Show +X more if needed
+            if (cart.length > 3) {
+                const overflow = document.createElement('div');
+                overflow.className = 'ribbon-overflow-count';
+                overflow.textContent = `+${cart.length - 3}`;
+                ribbonThumbnails.appendChild(overflow);
+            }
+        }
+    }
     
     if (totalItems > 0) { 
         document.getElementById('ribbon-items-count').textContent = `${totalItems} ITEM${totalItems > 1 ? 'S' : ''}`; 
@@ -1284,11 +1305,11 @@ updateGlobalCartUI = function() {
                 filteredUpsells.forEach(item => {
                     const v = item.variants[0];
                     upsellsList.innerHTML += `
-                        <div style="flex-shrink: 0; width: 120px; background: white; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px; text-align: center;">
+                        <div style="flex-shrink: 0; width: 120px; background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
                             <img src="${optimizeCloudinaryUrl(item.imageUrl, 100) || ''}" style="width: 60px; height: 60px; object-fit: contain; margin-bottom: 8px;" onerror="this.style.display='none'">
                             <p style="font-size: 11px; font-weight: 700; margin: 0 0 4px 0; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</p>
-                            <p style="font-size: 11px; color: #16a34a; font-weight: 800; margin: 0 0 8px 0;">Rs ${v.price}</p>
-                            <button onclick="quickAdd('${item._id}')" style="background: #e2e8f0; color: #0f172a; border: none; padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; cursor: pointer; width: 100%;">+ ADD</button>
+                            <p style="font-size: 13px; color: var(--primary); font-weight: 800; margin: 0 0 10px 0;">Rs ${v.price}</p>
+                            <button onclick="quickAdd('${item._id}')" style="background: #f1f5f9; color: var(--primary); border: none; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 800; cursor: pointer; width: 100%;">+ ADD</button>
                         </div>
                     `;
                     
@@ -1455,7 +1476,7 @@ checkOrderStatus = async function() {
 function initializeLiveMap(orderId) {
     const mapContainer = document.createElement('div');
     mapContainer.id = 'live-rider-map';
-    mapContainer.style.cssText = 'width: 100%; height: 250px; margin-top: 20px; border-radius: 8px; z-index: 1;';
+    mapContainer.style.cssText = 'width: 100%; height: 250px; margin-top: 20px; border-radius: 16px; z-index: 1;';
     
     document.getElementById('tracking-content').appendChild(mapContainer);
 
@@ -1528,7 +1549,7 @@ window.logoutCustomer = logoutCustomer;
             
             if (data.megaMarts && data.megaMarts.length > 0) {
                 const megaLabel = document.createElement('h3');
-                megaLabel.style.cssText = 'font-size: 13px; font-weight: 800; color: #475569; margin: 16px 16px 8px 16px; text-transform: uppercase; letter-spacing: 0.5px;';
+                megaLabel.style.cssText = 'font-size: 14px; font-weight: 800; color: var(--text-main); margin: 16px 16px 12px 16px; letter-spacing: -0.5px;';
                 megaLabel.textContent = '🏢 Mega Marts (Next Day)';
                 container.appendChild(megaLabel);
                 
@@ -1548,7 +1569,7 @@ window.logoutCustomer = logoutCustomer;
             
             if (data.quickCommerce && data.quickCommerce.length > 0) {
                 const quickLabel = document.createElement('h3');
-                quickLabel.style.cssText = 'font-size: 13px; font-weight: 800; color: #475569; margin: 16px 16px 8px 16px; text-transform: uppercase; letter-spacing: 0.5px;';
+                quickLabel.style.cssText = 'font-size: 14px; font-weight: 800; color: var(--text-main); margin: 16px 16px 12px 16px; letter-spacing: -0.5px;';
                 quickLabel.textContent = '⚡ Quick Commerce (15 Mins)';
                 container.appendChild(quickLabel);
                 
