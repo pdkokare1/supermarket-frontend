@@ -14,35 +14,47 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
     <link rel="stylesheet" href="styles.css">
 
-    <!-- PHASE 33 PINDUODUO COLLECTIVES UI STYLES -->
+    <!-- ============================================================================ -->
+    <!-- NEW: PHASE 33 PINDUODUO COLLECTIVES UI STYLES (LIGHT THEME)                  -->
+    <!-- ============================================================================ -->
     <style>
-        .collective-carousel { display: flex; gap: 16px; overflow-x: auto; padding: 0 16px 24px 16px; scrollbar-width: none; scroll-snap-type: x mandatory;}
+        .collective-carousel { display: flex; gap: 16px; overflow-x: auto; padding: 0 16px 24px 16px; scrollbar-width: none; }
         .collective-carousel::-webkit-scrollbar { display: none; }
         .collective-card { 
-            min-width: 290px; 
-            scroll-snap-align: center; 
-            background: linear-gradient(145deg, #ffffff, #f8fafc); 
-            border: 1px solid #e0e7ff; 
-            border-radius: 24px; 
+            min-width: 280px; 
+            background: var(--surface, #ffffff); 
+            border: 1px solid #e2e8f0;
+            border-radius: 20px; 
             padding: 20px; 
-            color: var(--text-main); 
-            box-shadow: 0 12px 32px rgba(79, 70, 229, 0.08); 
+            color: var(--text-main, #0f172a); 
+            box-shadow: 0 8px 24px rgba(149, 157, 165, 0.08); 
             flex-shrink: 0; 
-            position: relative; 
-            overflow: hidden; 
+            position: relative;
+            overflow: hidden;
         }
-        .collective-card::after { content: '🔥'; position: absolute; top: -15px; right: -10px; font-size: 80px; opacity: 0.03; z-index: 0; pointer-events: none; }
-        .collective-badge { background: linear-gradient(90deg, #ef4444, #f97316); color: white; padding: 6px 12px; border-radius: 8px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; display: inline-block; margin-bottom: 12px; position: relative; z-index: 1; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);}
-        .collective-title { font-size: 16px; font-weight: 800; margin: 0 0 6px 0; position: relative; z-index: 1; line-height: 1.3; }
-        .collective-price { font-size: 24px; font-weight: 800; background: linear-gradient(135deg, #F97316, #ea580c); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0 0 16px 0; position: relative; z-index: 1; }
-        .collective-price span { font-size: 13px; text-decoration: line-through; color: #94a3b8; font-weight: 600; margin-left: 8px; -webkit-text-fill-color: #94a3b8;}
+        .collective-card::after {
+            content: '🔥';
+            position: absolute;
+            top: -15px;
+            right: -10px;
+            font-size: 80px;
+            opacity: 0.04;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .collective-badge { background: #fee2e2; color: #ef4444; border: 1px solid #fecaca; padding: 6px 10px; border-radius: 8px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; display: inline-block; margin-bottom: 12px; position: relative; z-index: 1; }
+        .collective-title { font-size: 15px; font-weight: 800; margin: 0 0 6px 0; position: relative; z-index: 1; line-height: 1.3; }
+        .collective-price { font-size: 22px; font-weight: 800; color: var(--accent, #F97316); margin: 0 0 16px 0; position: relative; z-index: 1; }
+        .collective-price span { font-size: 13px; text-decoration: line-through; color: #94a3b8; font-weight: 600; margin-left: 8px; }
         .collective-progress-bg { background: #f1f5f9; height: 8px; border-radius: 100px; overflow: hidden; margin-bottom: 8px; position: relative; z-index: 1; }
         .collective-progress-bar { background: var(--primary); height: 100%; border-radius: 100px; transition: width 0.3s ease; }
         .collective-meta { display: flex; justify-content: space-between; font-size: 12px; color: #64748b; font-weight: 700; margin-bottom: 20px; position: relative; z-index: 1; }
-        .collective-btn { width: 100%; background: var(--primary); color: white; border: none; padding: 16px; border-radius: 14px; font-weight: 800; font-size: 15px; cursor: pointer; display: flex; justify-content: center; gap: 8px; align-items: center; position: relative; z-index: 1; box-shadow: 0 6px 15px rgba(79, 70, 229, 0.25); transition: transform 0.1s; }
+        .collective-btn { width: 100%; background: var(--primary, #4F46E5); color: white; border: none; padding: 14px; border-radius: 12px; font-weight: 800; font-size: 14px; cursor: pointer; display: flex; justify-content: center; gap: 8px; align-items: center; position: relative; z-index: 1; box-shadow: 0 6px 15px rgba(79, 70, 229, 0.25); transition: transform 0.1s; }
         .collective-btn:active { transform: scale(0.98); }
+        .collective-btn:disabled { background: #e2e8f0; color: #94a3b8; cursor: not-allowed; box-shadow: none; }
     </style>
 </head>
 <body>
@@ -50,12 +62,13 @@
         <div class="top-bar">
             <div class="delivery-info">
                 <div class="delivery-time-container">
-                    <h2>Delivery to Home</h2>
-                    <h1 class="delivery-time">18 MINS</h1>
+                    <h2>DailyPick</h2>
+                    <h1 class="delivery-time">18 minutes</h1>
                 </div>
-                <p class="delivery-location">D-104, Amit Colori... ▼</p> 
+                <p class="delivery-location">Locating... ▼</p> 
             </div>
             <div class="user-actions">
+                <div class="wallet-icon">💳 Rs 0</div>
                 <div class="profile-icon" aria-label="Profile" style="cursor: pointer;">👤</div>
             </div>
         </div>
@@ -63,71 +76,68 @@
         <div class="search-container">
             <div class="search-bar-wrapper">
                 <span class="search-icon">🔍</span>
-                <input type="text" id="search-input" class="search-input" placeholder="Search for 'Atta', 'Chips'..." aria-label="Search products">
+                <input type="text" id="search-input" class="search-input" placeholder="Search for milk, chips, soap..." aria-label="Search products">
                 <span class="mic-icon" aria-label="Voice Search">🎤</span>
             </div>
         </div>
 
         <div class="quick-nav">
-            <div class="quick-nav-item active" data-action="filter-cat" data-value="All">
-                <span class="nav-ico">🛍️</span>All
-            </div>
-            <div class="quick-nav-item" data-action="filter-tag" data-tag="promo-snack" data-title="Hot Deals">
-                <span class="nav-ico">🔥</span>Deals
-            </div>
-            <div class="quick-nav-item" data-action="filter-cat" data-value="Grocery & Kitchen">
-                <span class="nav-ico">🛒</span>Fresh
-            </div>
-            <div class="quick-nav-item" data-action="filter-cat" data-value="Personal Care">
-                <span class="nav-ico">🧴</span>Care
-            </div>
-            <div class="quick-nav-item" data-action="filter-cat" data-value="Cleaning Essentials">
-                <span class="nav-ico">🏠</span>Home
-            </div>
+            <div class="quick-nav-item active" data-action="filter-cat" data-value="All"><span class="nav-ico">🛍️</span>All</div>
+            <div class="quick-nav-item" data-action="filter-tag" data-tag="promo-snack" data-title="Hot Deals"><span class="nav-ico">🔥</span>Deals</div>
+            <div class="quick-nav-item" data-action="filter-cat" data-value="Grocery & Kitchen"><span class="nav-ico">🛒</span>Groceries</div>
+            <div class="quick-nav-item" data-action="filter-cat" data-value="Personal Care"><span class="nav-ico">🧴</span>Care</div>
+            <div class="quick-nav-item" data-action="filter-cat" data-value="Cleaning Essentials"><span class="nav-ico">🏠</span>Home</div>
         </div>
     </header>
 
     <article id="shop-view" class="view-section active">
         
+        <section class="promo-banners">
+            <div class="promo-card" style="background: linear-gradient(135deg, #F59E0B, #EA580C); color: white; cursor: pointer;" data-action="filter-tag" data-tag="promo-morning" data-title="Morning Fresh">
+                <p style="font-size: 11px; font-weight: 800; letter-spacing: 1px;">NEW ARRIVALS</p>
+                <h3 style="margin-top: 6px; font-size: 20px;">Morning Fresh</h3>
+                <p style="margin-top: auto; font-size: 12px; font-weight: 600;">✦ Shop Dairy ✦</p>
+            </div>
+            <div class="promo-card" style="background: linear-gradient(135deg, #0D9488, #047857); color: white; cursor: pointer;" data-action="filter-tag" data-tag="promo-snack" data-title="Snack Party">
+                <p style="font-size: 11px; font-weight: 800;">WEEKEND SPECIAL</p>
+                <h3 style="margin-top: 6px; font-size: 20px;">Snack Party</h3>
+                <p style="margin-top: auto; font-size: 12px; font-weight: 600;">✦ Munchies ✦</p>
+            </div>
+            <div class="promo-card" style="background: linear-gradient(135deg, #DBEAFE, #BFDBFE); color: #1E3A8A; cursor: pointer;" data-action="filter-tag" data-tag="promo-summer" data-title="Summer Coolers">
+                <p style="font-size: 11px; font-weight: 800;">FEATURED</p>
+                <h3 style="margin-top: 6px; font-size: 20px;">Summer Coolers</h3>
+                <p style="margin-top: auto; font-size: 12px; font-weight: 600;">✦ Refreshing ✦</p>
+            </div>
+        </section>
+
+        <!-- --- NEW: PHASE 33 PINDUODUO INJECTION ANCHOR --- -->
         <div id="collectives-injection-point"></div>
 
-        <div id="dynamic-shelves-container">
-            <!-- Mega Price Drop Shelf -->
-            <section id="mega-deals-section" class="hidden">
-                <div class="section-title">
-                    <span style="margin:0;">Mega Price Drop</span>
-                    <span class="see-all-link" onclick="document.getElementById('btn-view-all').click()">See All ▶</span>
+        <section class="category-section">
+            <h2 class="section-title">Shop by Category</h2>
+            <div id="categories-grid" class="categories-grid">
                 </div>
-                <div id="mega-deals-shelf" class="product-shelf"></div>
-            </section>
-
-            <!-- Trending / Frequently Bought Shelf -->
-            <section id="trending-section" class="hidden">
-                <div class="section-title">
-                    <span style="margin:0;">Frequently Bought</span>
-                </div>
-                <div id="trending-shelf" class="product-shelf"></div>
-            </section>
-        </div>
-
-        <section class="category-section" id="category-section-container">
-            <h2 class="section-title" style="margin:0;">Explore Categories</h2>
-            <div id="categories-grid" class="rich-categories-grid"></div>
         </section>
 
         <section class="products-section">
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 16px;">
-                <h2 class="section-title" id="product-grid-title" style="margin: 0; padding: 24px 0 16px 0;">All Products</h2>
-                <button id="btn-view-all" class="hidden" style="background: none; border: none; color: var(--primary); font-weight: 800; font-size: 13px; cursor: pointer;" aria-label="View all products">Clear Filter ✕</button>
+                <h2 class="section-title" id="product-grid-title" style="margin: 0;">All Products</h2>
+                <button id="btn-view-all" style="background: none; border: none; color: var(--primary); font-weight: 800; font-size: 13px; cursor: pointer;" aria-label="View all products">View All</button>
             </div>
             
+            <!-- --- NEW: PHASE 3 STORE-IN-STORE BRANDING BANNER --- -->
+            <div id="partner-brand-banner" class="partner-brand-banner hidden">
+                <div class="partner-brand-logo" id="partner-brand-logo">🏪</div>
+                <div>
+                    <h2 id="partner-brand-name" style="margin: 0; font-size: 20px; font-weight: 800;">Partner Store</h2>
+                    <p style="margin: 4px 0 0 0; font-size: 13px; opacity: 0.9;">Official DailyPick Fulfillment Partner</p>
+                </div>
+            </div>
+
             <main id="skeleton-grid" class="product-grid">
                 <div class="skeleton-card"><div class="skel-img"></div><div class="skel-text"></div><div class="skel-btn"></div></div>
                 <div class="skeleton-card"><div class="skel-img"></div><div class="skel-text"></div><div class="skel-btn"></div></div>
-                <div class="skeleton-card"><div class="skel-img"></div><div class="skel-text"></div><div class="skel-btn"></div></div>
-                <div class="skeleton-card"><div class="skel-img"></div><div class="skel-text"></div><div class="skel-btn"></div></div>
             </main>
-            
             <main id="storefront" class="product-grid hidden"></main>
         </section>
         
@@ -135,81 +145,96 @@
     </article>
 
     <article id="orders-view" class="view-section hidden">
-        <main class="tracking-container" style="padding-top: 16px;">
+        <main class="tracking-container" style="padding-top: 100px;">
             <div class="tracking-header">
-                <h2 style="margin:0;">Active Order</h2>
-                <button class="refresh-btn" id="btn-refresh-orders">↻ Refresh</button>
+                <h2>Active Order</h2>
+                <button class="refresh-btn" id="btn-refresh-orders" aria-label="Refresh Order Status">↻ Refresh</button>
             </div>
             <div id="tracking-content">
-                <p class="empty-state" style="color: #64748b; text-align: center; margin-top: 40px;">You have no active orders right now.</p>
+                <p class="empty-state">You have no active orders right now.</p>
             </div>
         </main>
     </article>
 
+    <!-- --- UPDATED: FLOATING PILL CART RIBBON --- -->
     <div id="cart-ribbon" class="cart-ribbon hidden">
         <div class="ribbon-left-cluster">
+            <div id="ribbon-thumbnails" class="ribbon-thumbnails">
+                <!-- Tiny overlapping images injected here via JS -->
+            </div>
             <div class="ribbon-info">
                 <span id="ribbon-items-count" class="ribbon-qty">1 ITEM</span>
                 <span id="ribbon-total-price" class="ribbon-price">Rs 0</span>
             </div>
-            <div style="width: 1px; height: 24px; background: rgba(255,255,255,0.2); margin: 0 4px;"></div>
-            <div id="ribbon-thumbnails" class="ribbon-thumbnails"></div>
         </div>
-        <div class="ribbon-action">
-            <span style="background: white; color: var(--primary); border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">▶</span>
-        </div>
+        <div class="ribbon-action">View Cart <span style="background: white; color: var(--primary); border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 10px;">▶</span></div>
     </div>
 
-    <!-- BOTTOM SHEET CART VIEW -->
     <section id="cart-view" class="cart-view">
-        <div class="cart-sheet-content">
-            <div class="bottom-sheet-handle"></div>
-            <div class="cart-header">
-                <h2 style="margin:0;">Checkout</h2>
-                <button class="back-btn" id="btn-close-cart">✕</button>
+        <div class="cart-header">
+            <button class="back-btn" id="btn-close-cart" aria-label="Close Cart">← Back</button>
+            <h2>Checkout</h2>
+            <div style="width: 60px;"></div>
+        </div>
+        
+        <div id="cart-items-container" class="cart-items"></div>
+
+        <div class="schedule-section">
+            <h3 class="delivery-title" style="margin-bottom: 12px;">Delivery Speed</h3>
+            <div class="delivery-tabs">
+                <button id="tab-instant" class="del-tab active" aria-label="Instant Delivery">⚡ 18 Mins</button>
+                <button id="tab-routine" class="del-tab" aria-label="Routine Delivery">📅 Daily Routine</button>
             </div>
+            <div id="routine-options" class="hidden" style="margin-top: 16px;">
+                <label style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; display: block; text-transform: uppercase;">Select Routine Time</label>
+                <select id="schedule-time" class="delivery-input" aria-label="Select delivery time">
+                    <option value="Daily at 7:00 AM">Morning (7:00 AM)</option>
+                    <option value="Daily at 6:00 PM">Evening (6:00 PM)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="delivery-section">
+            <h3 class="delivery-title" style="margin-bottom: 12px;">Payment Method</h3>
+            <div class="delivery-tabs" style="margin-bottom: 24px;">
+                <button id="tab-pay-cod" class="del-tab active" onclick="setPaymentMethod('Cash')" aria-label="Cash on Delivery">💵 Pay on Delivery</button>
+                <button id="tab-pay-online" class="del-tab" onclick="setPaymentMethod('Online')" aria-label="Pay Online">💳 Pay Online</button>
+            </div>
+
+            <h3 class="delivery-title">Delivery Details</h3>
+            <input type="text" id="cust-name" class="delivery-input" placeholder="Your Name" required aria-label="Your Name">
+            <input type="tel" id="cust-phone" class="delivery-input" placeholder="Phone Number" required aria-label="Phone Number">
+            <textarea id="cust-address" class="delivery-input" placeholder="Complete Address (Flat, Building, Street)" rows="2" required aria-label="Complete Address"></textarea>
+        </div>
+
+        <div id="smart-cart-upsells-container" class="hidden" style="padding: 20px; background: var(--surface); border-top: 1px solid #e2e8f0; margin-top: 8px;">
+            <h3 style="font-size: 15px; font-weight: 800; color: #0f172a; margin-top: 0; margin-bottom: 16px;">Frequently Bought Together 🔥</h3>
+            <div id="smart-cart-upsells-list" style="display: flex; gap: 16px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: none;">
+                </div>
+        </div>
+
+        <div class="cart-footer">
+            <div id="loyalty-wallet-container" class="hidden" style="background: #f0fdf4; padding: 16px; border-radius: 16px; border: 1px solid #bbf7d0; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <p style="margin: 0; font-size: 14px; font-weight: 800; color: #166534;">🌟 Super Wallet</p>
+                    <p style="margin: 2px 0 0 0; font-size: 12px; color: #15803d; font-weight: 600;">Available: <span id="loyalty-balance-display">Rs 0</span></p>
+                </div>
+                <input type="checkbox" id="use-loyalty-toggle" onchange="toggleLoyaltyPoints()" style="width: 24px; height: 24px; cursor: pointer; accent-color: #16a34a;">
+            </div>
+
+            <div class="summary-row"><span>Subtotal</span><span id="cart-subtotal" style="color: var(--text-main);">Rs 0</span></div>
+            <div class="summary-row"><span>Delivery</span><span id="cart-delivery" style="color: var(--text-main);">Rs 20</span></div>
             
-            <div id="cart-items-container" class="cart-items"></div>
-
-            <div class="schedule-section">
-                <h3 class="delivery-title">Delivery Speed</h3>
-                <div class="delivery-tabs">
-                    <button id="tab-instant" class="del-tab active">⚡ 18 Mins</button>
-                    <button id="tab-routine" class="del-tab">📅 Routine</button>
-                </div>
-                <div id="routine-options" class="hidden">
-                    <select id="schedule-time" class="delivery-input">
-                        <option value="Daily at 7:00 AM">Morning (7:00 AM)</option>
-                        <option value="Daily at 6:00 PM">Evening (6:00 PM)</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="delivery-section">
-                <h3 class="delivery-title">Payment & Address</h3>
-                <div class="delivery-tabs">
-                    <button id="tab-pay-cod" class="del-tab active" onclick="setPaymentMethod('Cash')">💵 Cash</button>
-                    <button id="tab-pay-online" class="del-tab" onclick="setPaymentMethod('Online')">💳 Online</button>
-                </div>
-
-                <input type="text" id="cust-name" class="delivery-input" placeholder="Your Name" required>
-                <input type="tel" id="cust-phone" class="delivery-input" placeholder="Phone Number" required>
-                <textarea id="cust-address" class="delivery-input" placeholder="Complete Address" rows="2" required></textarea>
-            </div>
-
-            <div class="cart-footer">
-                <div class="summary-row"><span>Item Total</span><span id="cart-subtotal" style="color: var(--text-main);">Rs 0</span></div>
-                <div class="summary-row"><span>Delivery Fee</span><span id="cart-delivery" style="color: var(--text-main);">Rs 20</span></div>
-                <hr class="summary-divider">
-                <div class="summary-row total-row"><span>Grand Total</span><span id="cart-total">Rs 0</span></div>
-                <button class="primary-btn checkout-btn" id="btn-checkout">Place Order</button>
-            </div>
+            <div class="summary-row hidden" id="loyalty-discount-row" style="color: #16a34a; font-weight: 800;"><span>Wallet Discount</span><span id="cart-loyalty-discount">-Rs 0</span></div>
+            
+            <hr class="summary-divider">
+            <div class="summary-row total-row"><span>To Pay</span><span id="cart-total">Rs 0</span></div>
+            <button class="primary-btn checkout-btn" id="btn-checkout" aria-label="Place Order">Place Order</button>
         </div>
     </section>
 
-    <!-- MODALS CONSTRAINED TO MOBILE FRAME -->
     <div id="isolation-modal" class="hidden" style="position: fixed; inset: 0; background: rgba(15,23,42,0.8); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
-        <div style="background: white; padding: 32px 24px; border-radius: 24px; width: 90%; max-width: 440px; text-align: center; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);">
+        <div style="background: white; padding: 32px 24px; border-radius: 24px; width: 90%; max-width: 320px; text-align: center; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);">
             <div style="font-size: 48px; margin-bottom: 16px;">🛒</div>
             <h3 style="margin-top: 0; color: #0f172a; font-size: 20px; font-weight: 800;">Change Store?</h3>
             <p style="color: #64748B; font-size: 14px; margin: 12px 0 32px; line-height: 1.5; font-weight: 500;">Your cart contains items from a different partner. Clear your cart to add this item?</p>
@@ -221,7 +246,7 @@
     </div>
 
     <div id="customer-login-modal" class="hidden" style="position: fixed; inset: 0; background: rgba(15,23,42,0.8); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
-        <div style="background: white; padding: 24px; border-radius: 24px; width: 90%; max-width: 440px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);">
+        <div style="background: white; padding: 24px; border-radius: 24px; width: 90%; max-width: 360px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <h3 style="margin: 0; color: #0f172a; font-weight: 800; font-size: 20px;">Login / Sign Up</h3>
                 <button onclick="closeCustomerLogin()" style="background: #f1f5f9; border: none; font-size: 16px; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #475569;">✕</button>
@@ -243,6 +268,27 @@
         </div>
     </div>
 
+    <div id="customer-rating-modal" class="hidden" style="position: fixed; inset: 0; background: rgba(15,23,42,0.8); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+        <div style="background: white; padding: 32px 24px; border-radius: 24px; width: 90%; max-width: 320px; text-align: center; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);">
+            <div style="font-size: 56px; margin-bottom: 16px;">⭐</div>
+            <h3 style="margin-top: 0; color: #0f172a; font-size: 20px; font-weight: 800;">Rate Your Delivery</h3>
+            <p style="color: #64748B; font-size: 14px; margin: 12px 0 32px; line-height: 1.5; font-weight: 500;">How was your DailyPick experience today?</p>
+            <div style="display: flex; justify-content: center; gap: 12px;">
+                <button onclick="submitOrderRating(1)" style="font-size: 28px; background: none; border: none; cursor: pointer; transition: transform 0.1s;">⭐</button>
+                <button onclick="submitOrderRating(2)" style="font-size: 28px; background: none; border: none; cursor: pointer; transition: transform 0.1s;">⭐</button>
+                <button onclick="submitOrderRating(3)" style="font-size: 28px; background: none; border: none; cursor: pointer; transition: transform 0.1s;">⭐</button>
+                <button onclick="submitOrderRating(4)" style="font-size: 28px; background: none; border: none; cursor: pointer; transition: transform 0.1s;">⭐</button>
+                <button onclick="submitOrderRating(5)" style="font-size: 28px; background: none; border: none; cursor: pointer; transition: transform 0.1s;">⭐</button>
+            </div>
+            <button onclick="document.getElementById('customer-rating-modal').classList.add('hidden')" style="margin-top: 32px; width: 100%; padding: 14px; background: #f1f5f9; color: #475569; border: none; border-radius: 12px; font-weight: 800; cursor: pointer;">Skip</button>
+        </div>
+    </div>
+
+    <div id="omni-cart-split-banner" class="hidden" style="background: #eef2ff; padding: 16px; margin-bottom: 20px; border-radius: 16px; border: 1px solid #c7d2fe;">
+        <p style="font-size: 13px; font-weight: 800; color: var(--primary); margin: 0; display: flex; align-items: center; gap: 6px;">ℹ️ Omni-Cart Active</p>
+        <p style="font-size: 12px; color: #475569; margin: 6px 0 0 0; font-weight: 500; line-height: 1.4;">Your cart contains items from multiple fulfillment zones. Delivery speeds may vary.</p>
+    </div>
+
     <div id="toast-container"></div>
 
     <nav class="bottom-nav">
@@ -254,6 +300,85 @@
 
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    
     <script src="app.js"></script>
+
+    <!-- UI ANCHORS -->
+    <style>
+        .discovery-carousel { display: flex; gap: 16px; overflow-x: auto; padding: 10px 16px 20px 16px; scrollbar-width: none; }
+        .discovery-carousel::-webkit-scrollbar { display: none; }
+        .discovery-card { min-width: 240px; background: white; border-radius: 16px; padding: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); border: 1px solid #f1f5f9; cursor: pointer; flex-shrink: 0; }
+        .discovery-title { font-size: 15px; font-weight: 800; color: #0f172a; margin: 0 0 6px 0; }
+        .discovery-meta { font-size: 12px; color: #64748b; margin: 0; font-weight: 600; }
+        .discovery-badge { display: inline-block; padding: 6px 10px; border-radius: 6px; font-size: 10px; font-weight: 800; margin-top: 12px; text-transform: uppercase; letter-spacing: 0.5px;}
+        .badge-enterprise { background: #eff6ff; color: #1d4ed8; }
+        .badge-quick { background: #f0fdf4; color: #15803d; }
+    </style>
+    
+    <div id="discovery-injection-point" style="display: none;">
+        <section id="discovery-section" style="margin-bottom: 24px;">
+            <div style="padding: 0 16px; display: flex; justify-content: space-between; align-items: flex-end;">
+                <div>
+                    <h2 class="section-title" style="margin: 0; padding-bottom: 0;">Stores Near You</h2>
+                    <p style="font-size: 12px; font-weight: 600; color: var(--primary); margin: 4px 0 0 0;">Omni-Cart Compatible</p>
+                </div>
+            </div>
+            <div id="discovery-lists-container"></div>
+        </section>
+    </div>
+
+    <!-- ============================================================================ -->
+    <!-- NEW: PHASE 16 CAPACITOR NATIVE UI POLISH & CAMERA MODAL                      -->
+    <!-- ============================================================================ -->
+    <style id="native-app-styles">
+        body {
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            overscroll-behavior-y: none;
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        
+        .cart-view.active {
+            animation: slideUpBottomSheet 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            border-top-left-radius: 32px;
+            border-top-right-radius: 32px;
+            box-shadow: 0 -10px 50px rgba(0,0,0,0.15);
+            top: auto;
+            bottom: 0;
+            height: 92vh;
+        }
+
+        @keyframes slideUpBottomSheet {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .bottom-sheet-handle {
+            width: 48px; height: 6px; background: #e2e8f0; border-radius: 10px; margin: 16px auto;
+        }
+    </style>
+
+    <div id="report-issue-modal" class="hidden" style="position: fixed; inset: 0; background: rgba(15,23,42,0.8); z-index: 9999; display: flex; align-items: flex-end; justify-content: center; backdrop-filter: blur(4px);">
+        <div style="background: white; padding: 24px; border-top-left-radius: 32px; border-top-right-radius: 32px; width: 100%; max-width: 500px; box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.15); animation: slideUpBottomSheet 0.3s forwards;">
+            <div class="bottom-sheet-handle"></div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0; color: #0f172a; font-weight: 800; font-size: 20px;">Report Damaged Item</h3>
+                <button onclick="closeReportIssueModal()" style="background: #f1f5f9; border: none; font-size: 16px; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #475569;">✕</button>
+            </div>
+            <p style="color: #64748B; font-size: 14px; margin-bottom: 24px; font-weight: 500; line-height: 1.5;">Please take a clear picture of the damaged or missing item so our support team can process your refund instantly.</p>
+            
+            <button onclick="triggerNativeCamera()" style="width: 100%; padding: 18px; background: var(--primary); color: white; border: none; border-radius: 16px; font-weight: 800; font-size: 16px; cursor: pointer; margin-bottom: 12px; box-shadow: 0 6px 15px rgba(79, 70, 229, 0.25);">📸 Open Camera</button>
+            
+            <input type="file" id="fallback-file-upload" accept="image/*" class="hidden" onchange="handleFallbackPhotoUpload(event)">
+            <button onclick="document.getElementById('fallback-file-upload').click()" style="width: 100%; padding: 18px; background: #f8fafc; color: var(--text-main); border: 1px solid #e2e8f0; border-radius: 16px; font-weight: 800; font-size: 16px; cursor: pointer;">📂 Choose from Gallery</button>
+            
+            <div id="photo-preview-container" class="hidden" style="margin-top: 32px; text-align: center;">
+                <img id="issue-photo-preview" src="" style="max-width: 100%; height: 200px; object-fit: cover; border-radius: 16px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
+                <button class="primary-btn" onclick="submitIssueReport()">Submit Report</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
