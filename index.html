@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://dailypick-backend-production-05d6.up.railway.app https://apis.google.com https://www.googleapis.com https://lumberjack.razorpay.com https://api.razorpay.com; img-src 'self' data: https://res.cloudinary.com; script-src 'self' https://www.gstatic.com https://checkout.razorpay.com 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; frame-src https://www.google.com https://recaptcha.net https://api.razorpay.com;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://dailypick-backend-production-05d6.up.railway.app https://apis.google.com https://www.googleapis.com https://lumberjack.razorpay.com https://api.razorpay.com https://nominatim.openstreetmap.org; img-src 'self' data: https://res.cloudinary.com https://*.tile.openstreetmap.org; script-src 'self' https://www.gstatic.com https://checkout.razorpay.com 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; frame-src https://www.google.com https://recaptcha.net https://api.razorpay.com;">
     
     <title>DailyPick | Quick Market</title>
     
@@ -19,6 +19,10 @@
     
     <!-- ENTERPRISE OPTIMIZATION: Defer third-party scripts to avoid blocking the initial DOM render -->
     <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
+
+    <!-- Map libraries for Location Picker -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
 
     <link rel="stylesheet" href="styles.css">
 
@@ -73,8 +77,8 @@
                     <!-- ENTERPRISE FIX: Removed hardcoded time -->
                     <h1 class="delivery-time" id="dynamic-eta">-- mins</h1>
                 </div>
-                <!-- ENTERPRISE FIX: Removed hardcoded location string -->
-                <p class="delivery-location" id="dynamic-location">Locating nearest store...</p> 
+                <!-- ENTERPRISE FIX: Interactive Location Header -->
+                <p class="delivery-location" id="dynamic-location" onclick="openLocationModal()" style="cursor: pointer;">Locating nearest store... ▼</p> 
             </div>
             <div class="user-actions">
                 <div class="wallet-icon">💳 Rs 0</div>
@@ -200,7 +204,6 @@
             </div>
         </div>
 
-        <!-- REPLACE THE EXISTING DELIVERY SECTION IN #cart-view WITH THIS -->
         <div class="delivery-section">
             <h3 class="delivery-title" style="margin-bottom: 12px;">Payment Method</h3>
             <div class="delivery-tabs" style="margin-bottom: 24px;">
@@ -212,7 +215,6 @@
             <input type="text" id="cust-name" class="delivery-input" placeholder="Your Name" required aria-label="Your Name">
             <input type="tel" id="cust-phone" class="delivery-input" placeholder="Phone Number" required aria-label="Phone Number" readonly style="background: #e2e8f0; color: #64748b; cursor: not-allowed;" title="Phone number is linked to your account">
             
-            <!-- NEW: Address Book Selector -->
             <div id="checkout-address-list" style="margin-top: 16px;">
                 <p style="font-size: 13px; color: #64748b;">Please login to view saved addresses.</p>
             </div>
@@ -303,9 +305,7 @@
     <nav class="bottom-nav">
         <button id="nav-shop" class="nav-item active" aria-label="Home"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
         <button id="nav-orders" class="nav-item" aria-label="Order Again"><span class="nav-icon">🛍️</span><span class="nav-label">Orders</span></button>
-        <!-- ENTERPRISE FIX: Wired Categories icon to jump to the actual categories section -->
         <button id="nav-cats" class="nav-item" aria-label="Categories"><span class="nav-icon">🗂️</span><span class="nav-label">Categories</span></button>
-        <!-- ENTERPRISE FIX: Removed nonsensical 'Print' button on B2C app, replaced with Profile/Auth trigger -->
         <button id="nav-profile" class="nav-item" aria-label="Profile"><span class="nav-icon">👤</span><span class="nav-label">Profile</span></button>
     </nav>
 
@@ -315,7 +315,6 @@
     
     <script src="app.js" defer></script>
 
-    <!-- UI ANCHORS -->
     <style>
         .discovery-carousel { display: flex; gap: 16px; overflow-x: auto; padding: 10px 16px 20px 16px; scrollbar-width: none; }
         .discovery-carousel::-webkit-scrollbar { display: none; }
@@ -443,5 +442,25 @@
             <button onclick="saveNewAddress()" class="primary-btn" style="margin-bottom: 0;">Save Address</button>
         </div>
     </div>
+
+    <!-- ENTERPRISE OPTIMIZATION: Interactive Map Picker Modal -->
+    <div id="location-picker-modal" class="cart-view" style="z-index: 9500;">
+        <div class="cart-header">
+            <button class="back-btn" onclick="closeLocationModal()">← Back</button>
+            <h2>Select Location</h2>
+            <div style="width: 60px;"></div>
+        </div>
+        <div style="padding: 16px; display: flex; flex-direction: column; height: calc(100vh - 80px);">
+            <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                <input type="text" id="location-search-input" class="delivery-input" style="margin: 0; flex: 1;" placeholder="Search area or drag pin on map...">
+                <button id="btn-search-loc" onclick="searchLocation()" class="primary-btn" style="margin: 0; width: auto; padding: 12px 20px; border-radius: 12px;">🔍</button>
+            </div>
+            
+            <div id="location-picker-map" style="width: 100%; flex: 1; border-radius: 16px; background: #e2e8f0; border: 1px solid #cbd5e1; z-index: 1;"></div>
+            
+            <button onclick="confirmLocation()" class="primary-btn" style="margin-top: 16px; margin-bottom: 0;">Confirm Location</button>
+        </div>
+    </div>
+
 </body>
 </html>
