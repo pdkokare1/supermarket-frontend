@@ -1,3 +1,4 @@
+<!-- supermarket-frontend/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,13 +8,17 @@
     
     <title>DailyPick | Quick Market</title>
     
+    <!-- ENTERPRISE OPTIMIZATION: Preload critical fonts to prevent FOUT and improve Core Web Vitals -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preconnect" href="https://dailypick-backend-production-05d6.up.railway.app" crossorigin>
-    <link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <link rel="preconnect" href="https://dailypick-backend-production-05d6.up.railway.app" crossorigin>
+    <link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
+    
+    <!-- ENTERPRISE OPTIMIZATION: Defer third-party scripts to avoid blocking the initial DOM render -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
 
     <link rel="stylesheet" href="styles.css">
 
@@ -34,6 +39,8 @@
             flex-shrink: 0; 
             position: relative;
             overflow: hidden;
+            /* ENTERPRISE OPTIMIZATION: GPU Acceleration */
+            transform: translateZ(0);
         }
         .collective-card::after {
             content: '🔥';
@@ -298,10 +305,11 @@
         <button class="nav-item" aria-label="Print"><span class="nav-icon">🖨️</span><span class="nav-label">Print</span></button>
     </nav>
 
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <!-- ENTERPRISE OPTIMIZATION: Defer Auth Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js" defer></script>
     
-    <script src="app.js"></script>
+    <script src="app.js" defer></script>
 
     <!-- UI ANCHORS -->
     <style>
