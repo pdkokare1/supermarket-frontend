@@ -10,6 +10,7 @@ const DELIVERY_FEE = 20;
 const ENABLE_CART_ISOLATION = false; 
 
 let allProducts = []; 
+// ENTERPRISE OPTIMIZATION: Cart Persistence
 let cart = JSON.parse(localStorage.getItem('dailyPick_cart')) || []; 
 let selectedDeliveryType = 'Instant'; 
 let selectedPaymentMethod = 'Cash'; 
@@ -22,6 +23,11 @@ let userLng = null;
 let pendingProductToAdd = null;
 let customerLoyaltyBalance = 0;
 let isLoyaltyApplied = false;
+
+/* --- ADD TO GLOBAL STATE VARIABLES --- */
+let userAddresses = JSON.parse(localStorage.getItem('dailyPick_addresses')) || [];
+let selectedAddressIndex = 0;
+let newAddressTag = 'Home';
 
 const storefront = document.getElementById('storefront'); 
 const skeletonGrid = document.getElementById('skeleton-grid'); 
@@ -149,9 +155,12 @@ function logoutCustomer() {
         localStorage.removeItem('dailyPick_customerToken');
         showToast("Logged out successfully.");
         updateAuthUI();
+        // Close profile modal if open
+        closeProfileModal();
     });
 }
 
+/* --- REPLACE EXISTING updateAuthUI FUNCTION --- */
 async function updateAuthUI() {
     const token = localStorage.getItem('dailyPick_customerToken');
     const profileIcon = document.querySelector('.profile-icon');
@@ -162,21 +171,148 @@ async function updateAuthUI() {
             const res = await storeFetchWithAuth(`${BACKEND_URL}/api/customers/me`);
             const result = await res.json();
             if (result.success && result.data) {
+                // Pre-fill Checkout Data
+                document.getElementById('cust-name').value = result.data.name || '';
+                document.getElementById('cust-phone').value = result.data.phone || '';
+                
+                document.getElementById('profile-display-name').textContent = result.data.name || 'DailyPick Member';
+                document.getElementById('profile-display-phone').textContent = result.data.phone || '';
+
+                // Handle Loyalty
                 customerLoyaltyBalance = result.data.loyaltyPoints || 0;
                 if (customerLoyaltyBalance > 0) {
                     document.getElementById('loyalty-wallet-container').classList.remove('hidden');
                     document.getElementById('loyalty-balance-display').textContent = `Rs ${customerLoyaltyBalance}`;
                 }
+
+                // Handle Addresses (Fallback to localStorage if backend array is empty)
+                if (result.data.addresses && result.data.addresses.length > 0) {
+                    userAddresses = result.data.addresses;
+                    localStorage.setItem('dailyPick_addresses', JSON.stringify(userAddresses));
+                }
+                renderAddressBooks();
             }
-        } catch(e) { console.warn("Loyalty fetch failed", e); }
+        } catch(e) { console.warn("Profile fetch failed", e); renderAddressBooks(); }
     } else {
         profileIcon.textContent = '👤'; 
         customerLoyaltyBalance = 0;
         isLoyaltyApplied = false;
+        userAddresses = [];
+        document.getElementById('cust-name').value = '';
+        document.getElementById('cust-phone').value = '';
         if(document.getElementById('use-loyalty-toggle')) document.getElementById('use-loyalty-toggle').checked = false;
         if(document.getElementById('loyalty-wallet-container')) document.getElementById('loyalty-wallet-container').classList.add('hidden');
+        renderAddressBooks();
     }
 }
+
+/* --- NEW: ADDRESS BOOK LOGIC --- */
+window.openProfileModal = function() {
+    const token = localStorage.getItem('dailyPick_customerToken');
+    if (!token) return openCustomerLogin();
+    document.getElementById('profile-modal').classList.add('active');
+};
+
+window.closeProfileModal = function() {
+    document.getElementById('profile-modal').classList.remove('active');
+};
+
+window.openAddAddressModal = function() {
+    const token = localStorage.getItem('dailyPick_customerToken');
+    if (!token) return openCustomerLogin();
+    document.getElementById('add-address-modal').classList.remove('hidden');
+};
+
+window.closeAddAddressModal = function() {
+    document.getElementById('add-address-modal').classList.add('hidden');
+    document.getElementById('new-addr-flat').value = '';
+    document.getElementById('new-addr-street').value = '';
+    document.getElementById('new-addr-landmark').value = '';
+    setAddressTag('Home');
+};
+
+window.setAddressTag = function(tag) {
+    newAddressTag = tag;
+    document.getElementById('tag-home').classList.toggle('active', tag === 'Home');
+    document.getElementById('tag-work').classList.toggle('active', tag === 'Work');
+    document.getElementById('tag-other').classList.toggle('active', tag === 'Other');
+};
+
+window.saveNewAddress = async function() {
+    const flat = document.getElementById('new-addr-flat').value.trim();
+    const street = document.getElementById('new-addr-street').value.trim();
+    const landmark = document.getElementById('new-addr-landmark').value.trim();
+    
+    if (!flat || !street) return showToast("Flat and Street are required.");
+
+    const fullAddress = `${flat}, ${street}${landmark ? ', Near ' + landmark : ''}`;
+    const addressObj = { tag: newAddressTag, fullAddress: fullAddress };
+
+    // Optimistic UI Update
+    userAddresses.push(addressObj);
+    selectedAddressIndex = userAddresses.length - 1;
+    localStorage.setItem('dailyPick_addresses', JSON.stringify(userAddresses));
+    
+    renderAddressBooks();
+    closeAddAddressModal();
+    showToast("Address Saved Successfully! 📍");
+
+    // Sync with backend asynchronously
+    try {
+        await storeFetchWithAuth(`${BACKEND_URL}/api/customers/me/addresses`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(addressObj)
+        });
+    } catch(e) { console.warn("Failed to sync address to cloud", e); }
+};
+
+window.selectAddress = function(index) {
+    selectedAddressIndex = index;
+    renderAddressBooks();
+};
+
+function renderAddressBooks() {
+    const checkoutList = document.getElementById('checkout-address-list');
+    const profileList = document.getElementById('profile-address-list');
+    
+    if (!checkoutList || !profileList) return;
+
+    if (userAddresses.length === 0) {
+        checkoutList.innerHTML = '<p style="font-size: 13px; color: #64748b;">No saved addresses.</p>';
+        profileList.innerHTML = '<p class="empty-state">No saved addresses.</p>';
+        return;
+    }
+
+    let checkoutHtml = '';
+    let profileHtml = '';
+
+    userAddresses.forEach((addr, idx) => {
+        const isSelected = idx === selectedAddressIndex;
+        const icon = addr.tag === 'Home' ? '🏠' : (addr.tag === 'Work' ? '🏢' : '📍');
+        
+        // Render for Checkout (Selectable Cards)
+        checkoutHtml += `
+            <div onclick="selectAddress(${idx})" style="background: ${isSelected ? '#e0e7ff' : '#f8fafc'}; border: 1px solid ${isSelected ? 'var(--primary)' : '#e2e8f0'}; padding: 16px; border-radius: 12px; margin-bottom: 8px; cursor: pointer; transition: 0.2s; position: relative;">
+                ${isSelected ? '<div style="position: absolute; top: 12px; right: 12px; color: var(--primary);">✅</div>' : ''}
+                <div style="font-size: 14px; font-weight: 800; color: var(--text-main); margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">${icon} ${addr.tag}</div>
+                <div style="font-size: 13px; color: var(--text-muted); line-height: 1.4;">${addr.fullAddress}</div>
+            </div>
+        `;
+
+        // Render for Profile (Static List)
+        profileHtml += `
+            <div style="background: white; border: 1px solid #e2e8f0; padding: 16px; border-radius: 12px; margin-bottom: 8px;">
+                <div style="font-size: 14px; font-weight: 800; color: var(--text-main); margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">${icon} ${addr.tag}</div>
+                <div style="font-size: 13px; color: var(--text-muted); line-height: 1.4;">${addr.fullAddress}</div>
+            </div>
+        `;
+    });
+
+    checkoutList.innerHTML = checkoutHtml;
+    profileList.innerHTML = profileHtml;
+}
+
 
 async function storeFetchWithAuth(url, options = {}) {
     const token = localStorage.getItem('dailyPick_customerToken'); 
@@ -703,6 +839,7 @@ function handleSearch(event) {
             const res = await storeFetchWithAuth(url);
             const result = await res.json();
             if (result.success && result.data.length > 0) {
+                // Ensure UI paints only once the data is fully prepped
                 requestAnimationFrame(() => renderProducts(result.data));
             }
         } catch (e) {}
@@ -1050,15 +1187,21 @@ window.setPaymentMethod = function(method) {
     document.getElementById('tab-pay-online').classList.toggle('active', method === 'Online');
 };
 
+/* --- REPLACE EXISTING placeOrder FUNCTION --- */
 async function placeOrder() { 
     if (cart.length === 0 || isProcessingOrder) return; 
     
     const name = document.getElementById('cust-name').value.trim(); 
     const phone = document.getElementById('cust-phone').value.trim(); 
-    const address = document.getElementById('cust-address').value.trim(); 
     
+    // ENTERPRISE UPDATE: Grab the selected address from the Address Book
+    let address = "";
+    if (userAddresses.length > 0 && userAddresses[selectedAddressIndex]) {
+        address = userAddresses[selectedAddressIndex].fullAddress;
+    }
+
     if (!name || !phone || !address) {
-        showToast('Please fill out all delivery details!');
+        showToast('Please provide your Name, Phone, and select a Delivery Address!');
         return;
     } 
     
@@ -1082,7 +1225,6 @@ async function placeOrder() {
     const totalDeliveryFee = DELIVERY_FEE * storeIds.length; 
     const grandSubtotal = cart.reduce((s, i) => s + (i.currentPrice * i.qty), 0); 
     const finalTotal = grandSubtotal + totalDeliveryFee; 
-    const scheduleTime = selectedDeliveryType === 'Routine' ? document.getElementById('schedule-time').value : 'ASAP'; 
     
     const idempotencyKey = 'OMNI-' + Date.now() + '-' + (window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : Math.random().toString(36).substring(2, 9));
     
@@ -1095,9 +1237,8 @@ async function placeOrder() {
 
     localStorage.setItem('dailyPick_pendingPayment', idempotencyKey);
 
-    // ENTERPRISE OPTIMIZATION: Failsafe AbortController to guarantee checkout unblocks if network dies
     const abortController = new AbortController();
-    const timeoutId = setTimeout(() => abortController.abort(), 15000); // 15s absolute max timeout
+    const timeoutId = setTimeout(() => abortController.abort(), 15000); 
 
     const finalizeBackendOrder = async (transactionId = null) => {
         try { 
@@ -1128,9 +1269,7 @@ async function placeOrder() {
                 localStorage.removeItem('dailyPick_cart'); 
                 localStorage.removeItem('dailyPick_pendingPayment'); 
                 
-                document.getElementById('cust-name').value = ''; 
-                document.getElementById('cust-phone').value = ''; 
-                document.getElementById('cust-address').value = ''; 
+                // Clear state but keep Auth data intact
                 setDeliveryType('Instant');
                 window.setPaymentMethod('Cash'); 
                 renderProducts(allProducts); 
@@ -1157,7 +1296,6 @@ async function placeOrder() {
             clearTimeout(timeoutId);
             checkoutBtn.textContent = 'Place Order'; 
             checkoutBtn.disabled = false; 
-            // ENTERPRISE FIX: Ensure unlock runs no matter what
             isProcessingOrder = false; 
         } 
     };
@@ -1474,9 +1612,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ENTERPRISE FIX: Wired the new Profile dock icon to open the customer login/auth modal
     const navProfile = document.getElementById('nav-profile');
-    if (navProfile) navProfile.addEventListener('click', openCustomerLogin);
+    if (navProfile) navProfile.addEventListener('click', window.openProfileModal);
 
-    document.querySelector('.profile-icon').addEventListener('click', openCustomerLogin);
+    document.querySelector('.profile-icon').addEventListener('click', window.openProfileModal);
     
     updateAuthUI();
     fetchCategories(); 
