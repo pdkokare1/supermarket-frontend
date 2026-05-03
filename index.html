@@ -8,7 +8,6 @@
     
     <title>DailyPick | Quick Market</title>
     
-    <!-- ENTERPRISE OPTIMIZATION: Preload critical fonts to prevent FOUT and improve Core Web Vitals -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preload" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style">
@@ -17,14 +16,10 @@
     <link rel="preconnect" href="https://dailypick-backend-production-05d6.up.railway.app" crossorigin>
     <link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
     
-    <!-- ENTERPRISE OPTIMIZATION: Defer third-party scripts to avoid blocking the initial DOM render -->
     <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
 
     <link rel="stylesheet" href="styles.css">
 
-    <!-- ============================================================================ -->
-    <!-- NEW: PHASE 33 PINDUODUO COLLECTIVES UI STYLES (LIGHT THEME)                  -->
-    <!-- ============================================================================ -->
     <style>
         .collective-carousel { display: flex; gap: 16px; overflow-x: auto; padding: 0 16px 24px 16px; scrollbar-width: none; }
         .collective-carousel::-webkit-scrollbar { display: none; }
@@ -39,7 +34,6 @@
             flex-shrink: 0; 
             position: relative;
             overflow: hidden;
-            /* ENTERPRISE OPTIMIZATION: GPU Acceleration */
             transform: translateZ(0);
         }
         .collective-card::after {
@@ -70,9 +64,11 @@
             <div class="delivery-info">
                 <div class="delivery-time-container">
                     <h2>DailyPick</h2>
-                    <h1 class="delivery-time">18 minutes</h1>
+                    <!-- ENTERPRISE FIX: Removed hardcoded time -->
+                    <h1 class="delivery-time" id="dynamic-eta">-- mins</h1>
                 </div>
-                <p class="delivery-location">Locating... ▼</p> 
+                <!-- ENTERPRISE FIX: Removed hardcoded location string -->
+                <p class="delivery-location" id="dynamic-location">Locating nearest store...</p> 
             </div>
             <div class="user-actions">
                 <div class="wallet-icon">💳 Rs 0</div>
@@ -117,13 +113,11 @@
             </div>
         </section>
 
-        <!-- --- NEW: PHASE 33 PINDUODUO INJECTION ANCHOR --- -->
         <div id="collectives-injection-point"></div>
 
         <section class="category-section">
             <h2 class="section-title">Shop by Category</h2>
-            <div id="categories-grid" class="categories-grid">
-                </div>
+            <div id="categories-grid" class="categories-grid"></div>
         </section>
 
         <section class="products-section">
@@ -132,7 +126,6 @@
                 <button id="btn-view-all" style="background: none; border: none; color: var(--primary); font-weight: 800; font-size: 13px; cursor: pointer;" aria-label="View all products">View All</button>
             </div>
             
-            <!-- --- NEW: PHASE 3 STORE-IN-STORE BRANDING BANNER --- -->
             <div id="partner-brand-banner" class="partner-brand-banner hidden">
                 <div class="partner-brand-logo" id="partner-brand-logo">🏪</div>
                 <div>
@@ -163,12 +156,9 @@
         </main>
     </article>
 
-    <!-- --- UPDATED: FLOATING PILL CART RIBBON --- -->
     <div id="cart-ribbon" class="cart-ribbon hidden">
         <div class="ribbon-left-cluster">
-            <div id="ribbon-thumbnails" class="ribbon-thumbnails">
-                <!-- Tiny overlapping images injected here via JS -->
-            </div>
+            <div id="ribbon-thumbnails" class="ribbon-thumbnails"></div>
             <div class="ribbon-info">
                 <span id="ribbon-items-count" class="ribbon-qty">1 ITEM</span>
                 <span id="ribbon-total-price" class="ribbon-price">Rs 0</span>
@@ -189,7 +179,7 @@
         <div class="schedule-section">
             <h3 class="delivery-title" style="margin-bottom: 12px;">Delivery Speed</h3>
             <div class="delivery-tabs">
-                <button id="tab-instant" class="del-tab active" aria-label="Instant Delivery">⚡ 18 Mins</button>
+                <button id="tab-instant" class="del-tab active" aria-label="Instant Delivery">⚡ Instant</button>
                 <button id="tab-routine" class="del-tab" aria-label="Routine Delivery">📅 Daily Routine</button>
             </div>
             <div id="routine-options" class="hidden" style="margin-top: 16px;">
@@ -216,8 +206,7 @@
 
         <div id="smart-cart-upsells-container" class="hidden" style="padding: 20px; background: var(--surface); border-top: 1px solid #e2e8f0; margin-top: 8px;">
             <h3 style="font-size: 15px; font-weight: 800; color: #0f172a; margin-top: 0; margin-bottom: 16px;">Frequently Bought Together 🔥</h3>
-            <div id="smart-cart-upsells-list" style="display: flex; gap: 16px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: none;">
-                </div>
+            <div id="smart-cart-upsells-list" style="display: flex; gap: 16px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: none;"></div>
         </div>
 
         <div class="cart-footer">
@@ -231,9 +220,7 @@
 
             <div class="summary-row"><span>Subtotal</span><span id="cart-subtotal" style="color: var(--text-main);">Rs 0</span></div>
             <div class="summary-row"><span>Delivery</span><span id="cart-delivery" style="color: var(--text-main);">Rs 20</span></div>
-            
             <div class="summary-row hidden" id="loyalty-discount-row" style="color: #16a34a; font-weight: 800;"><span>Wallet Discount</span><span id="cart-loyalty-discount">-Rs 0</span></div>
-            
             <hr class="summary-divider">
             <div class="summary-row total-row"><span>To Pay</span><span id="cart-total">Rs 0</span></div>
             <button class="primary-btn checkout-btn" id="btn-checkout" aria-label="Place Order">Place Order</button>
@@ -300,18 +287,18 @@
 
     <nav class="bottom-nav">
         <button id="nav-shop" class="nav-item active" aria-label="Home"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
-        <button id="nav-orders" class="nav-item" aria-label="Order Again"><span class="nav-icon">🛍️</span><span class="nav-label">Order Again</span></button>
+        <button id="nav-orders" class="nav-item" aria-label="Order Again"><span class="nav-icon">🛍️</span><span class="nav-label">Orders</span></button>
+        <!-- ENTERPRISE FIX: Wired Categories icon to jump to the actual categories section -->
         <button id="nav-cats" class="nav-item" aria-label="Categories"><span class="nav-icon">🗂️</span><span class="nav-label">Categories</span></button>
-        <button class="nav-item" aria-label="Print"><span class="nav-icon">🖨️</span><span class="nav-label">Print</span></button>
+        <!-- ENTERPRISE FIX: Removed nonsensical 'Print' button on B2C app, replaced with Profile/Auth trigger -->
+        <button id="nav-profile" class="nav-item" aria-label="Profile"><span class="nav-icon">👤</span><span class="nav-label">Profile</span></button>
     </nav>
 
-    <!-- ENTERPRISE OPTIMIZATION: Defer Auth Scripts -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js" defer></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js" defer></script>
     
     <script src="app.js" defer></script>
 
-    <!-- UI ANCHORS -->
     <style>
         .discovery-carousel { display: flex; gap: 16px; overflow-x: auto; padding: 10px 16px 20px 16px; scrollbar-width: none; }
         .discovery-carousel::-webkit-scrollbar { display: none; }
