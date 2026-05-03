@@ -8,6 +8,7 @@
     
     <title>DailyPick | Quick Market</title>
     
+    <!-- ENTERPRISE OPTIMIZATION: Preload critical fonts to prevent FOUT and improve Core Web Vitals -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preload" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" as="style">
@@ -16,10 +17,14 @@
     <link rel="preconnect" href="https://dailypick-backend-production-05d6.up.railway.app" crossorigin>
     <link rel="preconnect" href="https://res.cloudinary.com" crossorigin>
     
+    <!-- ENTERPRISE OPTIMIZATION: Defer third-party scripts to avoid blocking the initial DOM render -->
     <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
 
     <link rel="stylesheet" href="styles.css">
 
+    <!-- ============================================================================ -->
+    <!-- NEW: PHASE 33 PINDUODUO COLLECTIVES UI STYLES (LIGHT THEME)                  -->
+    <!-- ============================================================================ -->
     <style>
         .collective-carousel { display: flex; gap: 16px; overflow-x: auto; padding: 0 16px 24px 16px; scrollbar-width: none; }
         .collective-carousel::-webkit-scrollbar { display: none; }
@@ -34,6 +39,7 @@
             flex-shrink: 0; 
             position: relative;
             overflow: hidden;
+            /* ENTERPRISE OPTIMIZATION: GPU Acceleration */
             transform: translateZ(0);
         }
         .collective-card::after {
@@ -113,6 +119,7 @@
             </div>
         </section>
 
+        <!-- --- NEW: PHASE 33 PINDUODUO INJECTION ANCHOR --- -->
         <div id="collectives-injection-point"></div>
 
         <section class="category-section">
@@ -126,6 +133,7 @@
                 <button id="btn-view-all" style="background: none; border: none; color: var(--primary); font-weight: 800; font-size: 13px; cursor: pointer;" aria-label="View all products">View All</button>
             </div>
             
+            <!-- --- NEW: PHASE 3 STORE-IN-STORE BRANDING BANNER --- -->
             <div id="partner-brand-banner" class="partner-brand-banner hidden">
                 <div class="partner-brand-logo" id="partner-brand-logo">🏪</div>
                 <div>
@@ -156,6 +164,7 @@
         </main>
     </article>
 
+    <!-- --- UPDATED: FLOATING PILL CART RIBBON --- -->
     <div id="cart-ribbon" class="cart-ribbon hidden">
         <div class="ribbon-left-cluster">
             <div id="ribbon-thumbnails" class="ribbon-thumbnails"></div>
@@ -191,6 +200,7 @@
             </div>
         </div>
 
+        <!-- REPLACE THE EXISTING DELIVERY SECTION IN #cart-view WITH THIS -->
         <div class="delivery-section">
             <h3 class="delivery-title" style="margin-bottom: 12px;">Payment Method</h3>
             <div class="delivery-tabs" style="margin-bottom: 24px;">
@@ -200,8 +210,13 @@
 
             <h3 class="delivery-title">Delivery Details</h3>
             <input type="text" id="cust-name" class="delivery-input" placeholder="Your Name" required aria-label="Your Name">
-            <input type="tel" id="cust-phone" class="delivery-input" placeholder="Phone Number" required aria-label="Phone Number">
-            <textarea id="cust-address" class="delivery-input" placeholder="Complete Address (Flat, Building, Street)" rows="2" required aria-label="Complete Address"></textarea>
+            <input type="tel" id="cust-phone" class="delivery-input" placeholder="Phone Number" required aria-label="Phone Number" readonly style="background: #e2e8f0; color: #64748b; cursor: not-allowed;" title="Phone number is linked to your account">
+            
+            <!-- NEW: Address Book Selector -->
+            <div id="checkout-address-list" style="margin-top: 16px;">
+                <p style="font-size: 13px; color: #64748b;">Please login to view saved addresses.</p>
+            </div>
+            <button onclick="openAddAddressModal()" style="width: 100%; margin-top: 12px; padding: 14px; background: white; color: var(--primary); border: 1px dashed var(--primary); border-radius: 12px; font-weight: 800; cursor: pointer; transition: 0.1s;">+ Add New Address</button>
         </div>
 
         <div id="smart-cart-upsells-container" class="hidden" style="padding: 20px; background: var(--surface); border-top: 1px solid #e2e8f0; margin-top: 8px;">
@@ -294,11 +309,13 @@
         <button id="nav-profile" class="nav-item" aria-label="Profile"><span class="nav-icon">👤</span><span class="nav-label">Profile</span></button>
     </nav>
 
+    <!-- ENTERPRISE OPTIMIZATION: Defer Auth Scripts -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js" defer></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js" defer></script>
     
     <script src="app.js" defer></script>
 
+    <!-- UI ANCHORS -->
     <style>
         .discovery-carousel { display: flex; gap: 16px; overflow-x: auto; padding: 10px 16px 20px 16px; scrollbar-width: none; }
         .discovery-carousel::-webkit-scrollbar { display: none; }
@@ -373,6 +390,57 @@
                 <img id="issue-photo-preview" src="" style="max-width: 100%; height: 200px; object-fit: cover; border-radius: 16px; margin-bottom: 20px; border: 1px solid #e2e8f0;">
                 <button class="primary-btn" onclick="submitIssueReport()">Submit Report</button>
             </div>
+        </div>
+    </div>
+    
+    <!-- ============================================================================ -->
+    <!-- NEW: PROFILE & ADDRESS BOOK MODALS (Paste right before </body>)              -->
+    <!-- ============================================================================ -->
+    
+    <!-- Profile Bottom Sheet -->
+    <div id="profile-modal" class="cart-view" style="z-index: 9000;">
+        <div class="cart-header">
+            <button class="back-btn" onclick="closeProfileModal()">← Back</button>
+            <h2>My Profile</h2>
+            <div style="width: 60px;"></div>
+        </div>
+        <div style="padding: 24px; overflow-y: auto; flex: 1;">
+            <div style="text-align: center; margin-bottom: 32px;">
+                <div style="width: 80px; height: 80px; background: #e2e8f0; border-radius: 50%; font-size: 40px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto;">👤</div>
+                <h3 id="profile-display-name" style="margin: 0; font-size: 20px; font-weight: 800;">Guest User</h3>
+                <p id="profile-display-phone" style="margin: 4px 0 0 0; color: #64748b; font-weight: 600;">+91 ----------</p>
+            </div>
+            
+            <h3 style="font-size: 16px; margin-bottom: 16px;">Saved Addresses</h3>
+            <div id="profile-address-list"></div>
+            <button onclick="openAddAddressModal()" style="width: 100%; margin-top: 12px; padding: 14px; background: #f8fafc; color: var(--text-main); border: 1px solid #e2e8f0; border-radius: 12px; font-weight: 800; cursor: pointer;">+ Add New Address</button>
+            
+            <div style="margin-top: 40px;">
+                <button onclick="logoutCustomer()" style="width: 100%; padding: 16px; background: #fee2e2; color: #dc2626; border: none; border-radius: 12px; font-weight: 800; font-size: 16px; cursor: pointer;">Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add New Address Modal -->
+    <div id="add-address-modal" class="hidden" style="position: fixed; inset: 0; background: rgba(15,23,42,0.8); z-index: 9999; display: flex; align-items: flex-end; justify-content: center; backdrop-filter: blur(4px);">
+        <div style="background: white; padding: 24px; border-top-left-radius: 32px; border-top-right-radius: 32px; width: 100%; max-width: 500px; box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.15); animation: slideUpBottomSheet 0.3s forwards;">
+            <div class="bottom-sheet-handle"></div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0; font-weight: 800; font-size: 20px;">Add Address</h3>
+                <button onclick="closeAddAddressModal()" style="background: #f1f5f9; border: none; font-size: 16px; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #475569;">✕</button>
+            </div>
+            
+            <div class="delivery-tabs" style="margin-bottom: 16px;">
+                <button id="tag-home" class="del-tab active" onclick="setAddressTag('Home')">🏠 Home</button>
+                <button id="tag-work" class="del-tab" onclick="setAddressTag('Work')">🏢 Work</button>
+                <button id="tag-other" class="del-tab" onclick="setAddressTag('Other')">📍 Other</button>
+            </div>
+            
+            <input type="text" id="new-addr-flat" class="delivery-input" placeholder="Flat / House No. / Floor / Building" style="margin-top: 0; margin-bottom: 12px;">
+            <input type="text" id="new-addr-street" class="delivery-input" placeholder="Street / Area / Locality" style="margin-top: 0; margin-bottom: 12px;">
+            <input type="text" id="new-addr-landmark" class="delivery-input" placeholder="Landmark (Optional)" style="margin-top: 0; margin-bottom: 24px;">
+            
+            <button onclick="saveNewAddress()" class="primary-btn" style="margin-bottom: 0;">Save Address</button>
         </div>
     </div>
 </body>
