@@ -650,31 +650,35 @@ function handleSearch(event) {
     const banner = document.getElementById('partner-brand-banner');
     if (banner) banner.classList.add('hidden');
 
+    // ENTERPRISE OPTIMIZATION: Throttled UI Painting
     clearTimeout(searchDebounceTimeout);
     searchDebounceTimeout = setTimeout(async () => {
-        // Local NLP Scoring + Remote Fetch Combination
-        let searchTerms = rawQuery.split(' ');
-        for (const [key, related] of Object.entries(commonSynonyms)) {
-            if (rawQuery.includes(key)) searchTerms.push(...related);
-        }
         
-        const scoredProducts = allProducts.map(p => {
-            let score = 0;
-            const pName = (p.name || '').toLowerCase();
-            const pCat = (p.category || '').toLowerCase();
-            const pTags = (p.searchTags || '').toLowerCase();
+        requestAnimationFrame(() => {
+            // Local NLP Scoring
+            let searchTerms = rawQuery.split(' ');
+            for (const [key, related] of Object.entries(commonSynonyms)) {
+                if (rawQuery.includes(key)) searchTerms.push(...related);
+            }
             
-            searchTerms.forEach(term => {
-                if (pName.includes(term)) score += 10;
-                if (pCat.includes(term)) score += 5;
-                if (pTags.includes(term)) score += 5;
-                if (term.length > 3 && pName.includes(term.substring(0, term.length - 1))) score += 2;
-            });
-            return { product: p, score };
-        }).filter(item => item.score > 0).sort((a, b) => b.score - a.score).map(item => item.product);
+            const scoredProducts = allProducts.map(p => {
+                let score = 0;
+                const pName = (p.name || '').toLowerCase();
+                const pCat = (p.category || '').toLowerCase();
+                const pTags = (p.searchTags || '').toLowerCase();
+                
+                searchTerms.forEach(term => {
+                    if (pName.includes(term)) score += 10;
+                    if (pCat.includes(term)) score += 5;
+                    if (pTags.includes(term)) score += 5;
+                    if (term.length > 3 && pName.includes(term.substring(0, term.length - 1))) score += 2;
+                });
+                return { product: p, score };
+            }).filter(item => item.score > 0).sort((a, b) => b.score - a.score).map(item => item.product);
 
-        document.getElementById('product-grid-title').textContent = `Search Results`;
-        renderProducts(scoredProducts);
+            document.getElementById('product-grid-title').textContent = `Search Results`;
+            renderProducts(scoredProducts);
+        });
         
         // Background DB Autocomplete Fetch
         try {
@@ -683,10 +687,11 @@ function handleSearch(event) {
             const res = await storeFetchWithAuth(url);
             const result = await res.json();
             if (result.success && result.data.length > 0) {
-                renderProducts(result.data); // Override with backend truth if available
+                // Ensure UI paints only once the data is fully prepped
+                requestAnimationFrame(() => renderProducts(result.data));
             }
         } catch (e) {}
-    }, 300);
+    }, 400); // 400ms debounce prevents rapid typing from freezing the mobile browser
 }
 
 // UNIFIED LOGIC: QuickAdd now includes Haptics automatically
@@ -1085,8 +1090,11 @@ async function placeOrder() {
         deliveryType: selectedDeliveryType 
     }));
 
-    // ENTERPRISE OPTIMIZATION: Ghost Order Recovery Flag
     localStorage.setItem('dailyPick_pendingPayment', idempotencyKey);
+
+    // ENTERPRISE OPTIMIZATION: Failsafe AbortController to guarantee checkout unblocks if network dies
+    const abortController = new AbortController();
+    const timeoutId = setTimeout(() => abortController.abort(), 15000); // 15s absolute max timeout
 
     const finalizeBackendOrder = async (transactionId = null) => {
         try { 
@@ -1105,7 +1113,8 @@ async function placeOrder() {
                     notes: finalNotes, 
                     paymentMethod: selectedPaymentMethod,
                     transactionId: transactionId
-                }) 
+                }),
+                signal: abortController.signal
             }); 
             
             const result = await res.json();
@@ -1113,8 +1122,8 @@ async function placeOrder() {
             if (result.success) {
                 localStorage.setItem('dailyPick_activeOrderId', result.splitShipmentGroupId || 'Group_Processing'); 
                 cart = []; 
-                localStorage.removeItem('dailyPick_cart'); // Clear persistence on success
-                localStorage.removeItem('dailyPick_pendingPayment'); // Clear ghost order flag on success
+                localStorage.removeItem('dailyPick_cart'); 
+                localStorage.removeItem('dailyPick_pendingPayment'); 
                 
                 document.getElementById('cust-name').value = ''; 
                 document.getElementById('cust-phone').value = ''; 
@@ -1127,21 +1136,25 @@ async function placeOrder() {
                 switchView('orders'); 
                 showToast(`Omni-Cart Success! Split into ${result.totalShipments || storeIds.length} shipments. 🚀`); 
             } else {
-                // ENTERPRISE FIX: Catch 409 Inventory Conflicts and auto-refresh the UI safely
                 if (res.status === 409) {
                     showToast('⚠️ Some items in your cart just sold out! Refreshing inventory...');
                     localStorage.removeItem('dailyPick_pendingPayment');
-                    fetchProducts(); // Auto-refresh the storefront
+                    fetchProducts(); 
                 } else {
                     showToast('Failed to place order: ' + result.message); 
                 }
             }
         } catch(e) { 
-            showToast('Network error.'); 
+            if (e.name === 'AbortError') {
+                showToast('Network timeout. Your connection is unstable, but the order might have succeeded. Check "Orders".');
+            } else {
+                showToast('Network error.'); 
+            }
         } finally { 
+            clearTimeout(timeoutId);
             checkoutBtn.textContent = 'Place Order'; 
             checkoutBtn.disabled = false; 
-            isProcessingOrder = false; 
+            isProcessingOrder = false; // Guaranteed unlock
         } 
     };
 
