@@ -10,7 +10,6 @@ const DELIVERY_FEE = 20;
 const ENABLE_CART_ISOLATION = false; 
 
 let allProducts = []; 
-// ENTERPRISE OPTIMIZATION: Cart Persistence
 let cart = JSON.parse(localStorage.getItem('dailyPick_cart')) || []; 
 let selectedDeliveryType = 'Instant'; 
 let selectedPaymentMethod = 'Cash'; 
@@ -153,7 +152,6 @@ function logoutCustomer() {
     });
 }
 
-// UNIFIED LOGIC: Update Auth UI + Fetch Loyalty Balance
 async function updateAuthUI() {
     const token = localStorage.getItem('dailyPick_customerToken');
     const profileIcon = document.querySelector('.profile-icon');
@@ -180,7 +178,6 @@ async function updateAuthUI() {
     }
 }
 
-// UNIFIED LOGIC: Fetch wrapper + Inject Loyalty usage
 async function storeFetchWithAuth(url, options = {}) {
     const token = localStorage.getItem('dailyPick_customerToken'); 
     options.headers = options.headers || {};
@@ -207,7 +204,6 @@ async function storeFetchWithAuth(url, options = {}) {
     return response;
 }
 
-// --- HARDWARE CAPACITOR BRIDGES ---
 const triggerHaptic = async (style = 'LIGHT') => {
     if (window.Capacitor && window.Capacitor.isNativePlatform()) {
         try {
@@ -217,18 +213,19 @@ const triggerHaptic = async (style = 'LIGHT') => {
     }
 };
 
-// UNIFIED LOGIC: HTML5 Geo + Capacitor Native Override + Discovery Call
 async function initializeLocationAndFetch() {
     const successHandler = (position) => {
         userLat = position.coords.latitude;
         userLng = position.coords.longitude;
-        document.querySelector('.delivery-location').textContent = '📍 Near You ▼';
+        document.getElementById('dynamic-location').textContent = '📍 Finding fastest route... ▼';
         fetchDiscoveryStores(userLat, userLng);
         fetchProducts(); 
     };
 
     const errorHandler = (error) => {
         console.warn("Location access denied or failed. Loading default catalog.");
+        document.getElementById('dynamic-eta').textContent = 'Standard';
+        document.getElementById('dynamic-location').textContent = '📍 Delivery Available ▼';
         fetchProducts(); 
     };
 
@@ -314,7 +311,26 @@ async function fetchDiscoveryStores(lat, lng) {
     try {
         const res = await storeFetchWithAuth(`${BACKEND_URL}/api/stores/discover?lat=${lat}&lng=${lng}`);
         const result = await res.json();
-        if (result.success && result.data) renderDiscoveryUI(result.data);
+        if (result.success && result.data) {
+            renderDiscoveryUI(result.data);
+            
+            // ENTERPRISE FIX: Dynamically populate ETA and Location headers based on nearest stores
+            const etaEl = document.getElementById('dynamic-eta');
+            const locEl = document.getElementById('dynamic-location');
+            
+            if (result.data.quickCommerce && result.data.quickCommerce.length > 0) {
+                const closest = result.data.quickCommerce[0];
+                if (etaEl) etaEl.textContent = '15 mins'; 
+                if (locEl) locEl.textContent = `📍 Near ${closest.location} ▼`;
+            } else if (result.data.megaMarts && result.data.megaMarts.length > 0) {
+                const closest = result.data.megaMarts[0];
+                if (etaEl) etaEl.textContent = 'Next Day';
+                if (locEl) locEl.textContent = `📍 Near ${closest.location} ▼`;
+            } else {
+                if (etaEl) etaEl.textContent = 'Standard';
+                if (locEl) locEl.textContent = '📍 Delivery Available ▼';
+            }
+        }
     } catch(e) { console.warn("Discovery API unavailable", e); }
 }
 
@@ -472,7 +488,7 @@ async function fetchProducts() {
             skeletonGrid.classList.add('hidden'); 
             storefront.classList.remove('hidden'); 
             renderProducts(allProducts);
-            if (cart.length > 0) updateGlobalCartUI(); // Refresh cart UI if loaded from persistence
+            if (cart.length > 0) updateGlobalCartUI(); 
         } 
     } catch(e) { 
         skeletonGrid.innerHTML = '';
@@ -687,14 +703,12 @@ function handleSearch(event) {
             const res = await storeFetchWithAuth(url);
             const result = await res.json();
             if (result.success && result.data.length > 0) {
-                // Ensure UI paints only once the data is fully prepped
                 requestAnimationFrame(() => renderProducts(result.data));
             }
         } catch (e) {}
-    }, 400); // 400ms debounce prevents rapid typing from freezing the mobile browser
+    }, 400); 
 }
 
-// UNIFIED LOGIC: QuickAdd now includes Haptics automatically
 window.quickAdd = function(productId) { 
     triggerHaptic('MEDIUM');
     let p = allProducts.find(p => p._id === productId); 
@@ -745,7 +759,6 @@ window.confirmClearCart = function() {
     }
 };
 
-// UNIFIED LOGIC: AdjustQty includes Haptics
 window.adjustQty = function(productId, change) { 
     triggerHaptic('LIGHT');
     const idx = cart.findIndex(i => i._id === productId); 
@@ -796,17 +809,12 @@ function updateCardActionUI(productId) {
     } 
 }
 
-// ============================================================================
-// --- UNIFIED ENTERPRISE CART MANAGER (Eliminates 4x Execution Stack) ---
-// ============================================================================
 function updateGlobalCartUI() { 
-    // 1. Persistence
     localStorage.setItem('dailyPick_cart', JSON.stringify(cart));
 
     const totalItems = cart.reduce((s, i) => s + i.qty, 0); 
     const subtotal = cart.reduce((s, i) => s + (i.currentPrice * i.qty), 0); 
     
-    // 2. Ribbon Logic
     const ribbonThumbnails = document.getElementById('ribbon-thumbnails');
     if (ribbonThumbnails) {
         ribbonThumbnails.innerHTML = '';
@@ -834,7 +842,6 @@ function updateGlobalCartUI() {
         cartRibbon.classList.add('hidden'); 
     } 
     
-    // 3. Cart View Rendering
     cartItemsContainer.innerHTML = ''; 
     if (cart.length === 0) { 
         const emptyCart = document.createElement('p');
@@ -932,7 +939,6 @@ function updateGlobalCartUI() {
             fragment.appendChild(row);
         });
         
-        // Phase 10 Eta Badges
         const isEnterprise = !group.storeName.includes('DailyPick Platform');
         const deliveryEta = document.createElement('div');
         deliveryEta.style.cssText = `font-size: 10px; font-weight: 700; margin-top: 4px; padding: 2px 6px; border-radius: 4px; display: inline-block; ${isEnterprise ? 'background: #dbeafe; color: #0369a1;' : 'background: #dcfce7; color: #166534;'}`;
@@ -942,7 +948,6 @@ function updateGlobalCartUI() {
     
     cartItemsContainer.appendChild(fragment);
 
-    // 4. Omni-Cart Banner Logic
     const header = document.querySelector('.cart-header');
     let existingBanner = document.getElementById('omni-cart-banner');
     if (uniqueStores > 1) {
@@ -957,7 +962,6 @@ function updateGlobalCartUI() {
         if (existingBanner) existingBanner.remove();
     }
     
-    // 5. Financials & Loyalty Calculations
     const totalDeliveryFee = uniqueStores === 0 ? 0 : (DELIVERY_FEE * uniqueStores);
     let finalTotal = subtotal + totalDeliveryFee;
     let discountApplied = 0;
@@ -974,7 +978,6 @@ function updateGlobalCartUI() {
     document.getElementById('cart-subtotal').textContent = `Rs ${subtotal}`; 
     document.getElementById('cart-total').textContent = `Rs ${finalTotal}`; 
 
-    // 6. Smart Upsells (Async so it doesn't block the UI render)
     setTimeout(async () => {
         const upsellsContainer = document.getElementById('smart-cart-upsells-container');
         const upsellsList = document.getElementById('smart-cart-upsells-list');
@@ -1154,7 +1157,8 @@ async function placeOrder() {
             clearTimeout(timeoutId);
             checkoutBtn.textContent = 'Place Order'; 
             checkoutBtn.disabled = false; 
-            isProcessingOrder = false; // Guaranteed unlock
+            // ENTERPRISE FIX: Ensure unlock runs no matter what
+            isProcessingOrder = false; 
         } 
     };
 
@@ -1199,9 +1203,6 @@ async function placeOrder() {
     }
 }
 
-// ============================================================================
-// --- UNIFIED ORDER TRACKER (Eliminates 3x Execution Stack) ---
-// ============================================================================
 let consumerLiveMap = null;
 let riderMarker = null;
 let consumerTrackingWS = null;
@@ -1278,7 +1279,6 @@ async function checkOrderStatus() {
                 card.appendChild(trackingBtn);
             }
 
-            // Phase 16: Damage Reporting Flow
             if (order.status === 'Delivered' || order.status === 'Completed') {
                 const issueBtn = document.createElement('button');
                 issueBtn.onclick = () => window.openReportIssueModal(order._id);
@@ -1290,7 +1290,6 @@ async function checkOrderStatus() {
 
             trackingContent.appendChild(card);
             
-            // Phase 11: Rating Prompt Injection
             if ((order.status === 'Delivered' || order.status === 'Completed') && !localStorage.getItem(`rated_${savedOrderId}`)) {
                 setTimeout(() => {
                     const ratingContainer = document.getElementById('customer-rating-modal');
@@ -1301,7 +1300,6 @@ async function checkOrderStatus() {
                 }, 500);
             }
 
-            // Phase 13: Native Leaflet Map Injection for Active Riders
             if (order.status === 'Dispatched') {
                 if (typeof L === 'undefined') {
                     const leafletCss = document.createElement('link');
@@ -1319,7 +1317,6 @@ async function checkOrderStatus() {
                 }
             }
 
-            // Server-Sent Events Background Tracker
             if (order.status !== 'Dispatched' && !trackingStreamController) {
                 const token = localStorage.getItem('dailyPick_customerToken') || '';
                 trackingStreamController = new AbortController();
@@ -1382,7 +1379,7 @@ async function checkOrderStatus() {
 }
 
 function initializeLiveMap(orderId) {
-    if (document.getElementById('live-rider-map')) return; // Prevent duplicate maps
+    if (document.getElementById('live-rider-map')) return; 
     
     const mapContainer = document.createElement('div');
     mapContainer.id = 'live-rider-map';
@@ -1443,7 +1440,6 @@ function showToast(message) {
 
 // --- APP INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
-    // Phase 17 Marketing Attribution
     const urlParams = new URLSearchParams(window.location.search);
     const ref = urlParams.get('ref') || urlParams.get('utm_campaign') || urlParams.get('source');
     if (ref) localStorage.setItem('dailyPick_marketingRef', ref);
@@ -1469,7 +1465,16 @@ document.addEventListener('DOMContentLoaded', () => {
     
     document.getElementById('nav-shop').addEventListener('click', () => switchView('shop'));
     document.getElementById('nav-orders').addEventListener('click', () => switchView('orders'));
-    document.getElementById('nav-cats').addEventListener('click', () => window.scrollTo({top: 0, behavior: 'smooth'}));
+    
+    // ENTERPRISE FIX: Wired Categories dock icon to scroll smoothly to the grid
+    document.getElementById('nav-cats').addEventListener('click', () => {
+        switchView('shop');
+        document.getElementById('categories-grid').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    // ENTERPRISE FIX: Wired the new Profile dock icon to open the customer login/auth modal
+    const navProfile = document.getElementById('nav-profile');
+    if (navProfile) navProfile.addEventListener('click', openCustomerLogin);
 
     document.querySelector('.profile-icon').addEventListener('click', openCustomerLogin);
     
@@ -1478,7 +1483,6 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchEnterprisePartners(); 
     initializeLocationAndFetch();
     
-    // Restore UI for Cart Persistence
     if (cart.length > 0) updateGlobalCartUI();
 });
 
@@ -1604,9 +1608,6 @@ window.registerNativePushToken = async function(jwtToken) {
     }
 };
 
-// ============================================================================
-// --- PHASE 33 PINDUODUO PROTOCOL (MICRO-NEIGHBORHOOD GROUP BUYS) ---
-// ============================================================================
 let isJoiningCollective = false;
 
 const MOCK_COLLECTIVES = [
