@@ -10,7 +10,6 @@ const DELIVERY_FEE = 20;
 const ENABLE_CART_ISOLATION = false; 
 
 let allProducts = []; 
-// ENTERPRISE OPTIMIZATION: Cart Persistence
 let cart = JSON.parse(localStorage.getItem('dailyPick_cart')) || []; 
 let selectedDeliveryType = 'Instant'; 
 let selectedPaymentMethod = 'Cash'; 
@@ -24,7 +23,6 @@ let pendingProductToAdd = null;
 let customerLoyaltyBalance = 0;
 let isLoyaltyApplied = false;
 
-/* --- ADD TO GLOBAL STATE VARIABLES --- */
 let userAddresses = JSON.parse(localStorage.getItem('dailyPick_addresses')) || [];
 let selectedAddressIndex = 0;
 let newAddressTag = 'Home';
@@ -155,12 +153,10 @@ function logoutCustomer() {
         localStorage.removeItem('dailyPick_customerToken');
         showToast("Logged out successfully.");
         updateAuthUI();
-        // Close profile modal if open
         closeProfileModal();
     });
 }
 
-/* --- REPLACE EXISTING updateAuthUI FUNCTION --- */
 async function updateAuthUI() {
     const token = localStorage.getItem('dailyPick_customerToken');
     const profileIcon = document.querySelector('.profile-icon');
@@ -206,7 +202,6 @@ async function updateAuthUI() {
     }
 }
 
-/* --- NEW: ADDRESS BOOK LOGIC --- */
 window.openProfileModal = function() {
     const token = localStorage.getItem('dailyPick_customerToken');
     if (!token) return openCustomerLogin();
@@ -248,7 +243,6 @@ window.saveNewAddress = async function() {
     const fullAddress = `${flat}, ${street}${landmark ? ', Near ' + landmark : ''}`;
     const addressObj = { tag: newAddressTag, fullAddress: fullAddress };
 
-    // Optimistic UI Update
     userAddresses.push(addressObj);
     selectedAddressIndex = userAddresses.length - 1;
     localStorage.setItem('dailyPick_addresses', JSON.stringify(userAddresses));
@@ -257,7 +251,6 @@ window.saveNewAddress = async function() {
     closeAddAddressModal();
     showToast("Address Saved Successfully! 📍");
 
-    // Sync with backend asynchronously
     try {
         await storeFetchWithAuth(`${BACKEND_URL}/api/customers/me/addresses`, {
             method: 'POST',
@@ -291,7 +284,6 @@ function renderAddressBooks() {
         const isSelected = idx === selectedAddressIndex;
         const icon = addr.tag === 'Home' ? '🏠' : (addr.tag === 'Work' ? '🏢' : '📍');
         
-        // Render for Checkout (Selectable Cards)
         checkoutHtml += `
             <div onclick="selectAddress(${idx})" style="background: ${isSelected ? '#e0e7ff' : '#f8fafc'}; border: 1px solid ${isSelected ? 'var(--primary)' : '#e2e8f0'}; padding: 16px; border-radius: 12px; margin-bottom: 8px; cursor: pointer; transition: 0.2s; position: relative;">
                 ${isSelected ? '<div style="position: absolute; top: 12px; right: 12px; color: var(--primary);">✅</div>' : ''}
@@ -300,7 +292,6 @@ function renderAddressBooks() {
             </div>
         `;
 
-        // Render for Profile (Static List)
         profileHtml += `
             <div style="background: white; border: 1px solid #e2e8f0; padding: 16px; border-radius: 12px; margin-bottom: 8px;">
                 <div style="font-size: 14px; font-weight: 800; color: var(--text-main); margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">${icon} ${addr.tag}</div>
@@ -313,6 +304,115 @@ function renderAddressBooks() {
     profileList.innerHTML = profileHtml;
 }
 
+// ============================================================================
+// --- NEW: INTERACTIVE MAP & REVERSE GEOCODING MODULE ---
+// ============================================================================
+let locationPickerMap = null;
+let locationPickerMarker = null;
+
+window.openLocationModal = function() {
+    document.getElementById('location-picker-modal').classList.add('active');
+    
+    if (!locationPickerMap && typeof L !== 'undefined') {
+        setTimeout(() => {
+            const lat = userLat || 18.6298;
+            const lng = userLng || 73.7997;
+            
+            locationPickerMap = L.map('location-picker-map').setView([lat, lng], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(locationPickerMap);
+            locationPickerMarker = L.marker([lat, lng], { draggable: true }).addTo(locationPickerMap);
+            
+            // Map Click updates Marker
+            locationPickerMap.on('click', function(e) {
+                locationPickerMarker.setLatLng(e.latlng);
+                updateLocationText(e.latlng.lat, e.latlng.lng);
+            });
+
+            // Marker Drag updates
+            locationPickerMarker.on('dragend', function(e) {
+                const position = locationPickerMarker.getLatLng();
+                updateLocationText(position.lat, position.lng);
+            });
+            
+            // Initial Geocode run
+            updateLocationText(lat, lng);
+            
+        }, 350); // Wait for CSS bottom-sheet animation to finish before rendering tiles
+    }
+};
+
+window.closeLocationModal = function() {
+    document.getElementById('location-picker-modal').classList.remove('active');
+};
+
+async function updateLocationText(lat, lng) {
+    const input = document.getElementById('location-search-input');
+    input.value = "Fetching address...";
+    try {
+        // Free Reverse Geocoding via OpenStreetMap
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+        const data = await res.json();
+        if (data && data.display_name) {
+            input.value = data.display_name;
+            const modal = document.getElementById('location-picker-modal');
+            modal.setAttribute('data-lat', lat);
+            modal.setAttribute('data-lng', lng);
+            // Grab the most concise neighborhood name for the header
+            modal.setAttribute('data-name', data.address.suburb || data.address.neighbourhood || data.address.city || "Custom Location");
+        }
+    } catch(e) {
+        input.value = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    }
+}
+
+window.searchLocation = async function() {
+    const query = document.getElementById('location-search-input').value;
+    if (!query || query.length < 3) return;
+    
+    const btn = document.getElementById('btn-search-loc');
+    const oldText = btn.textContent;
+    btn.textContent = '...';
+    
+    try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        if (data && data.length > 0) {
+            const lat = parseFloat(data[0].lat);
+            const lng = parseFloat(data[0].lon);
+            
+            if (locationPickerMap && locationPickerMarker) {
+                const newLatLng = new L.LatLng(lat, lng);
+                locationPickerMap.panTo(newLatLng);
+                locationPickerMarker.setLatLng(newLatLng);
+                updateLocationText(lat, lng);
+            }
+        } else {
+            showToast("Location not found. Try a broader search.");
+        }
+    } catch(e) {
+        showToast("Search failed.");
+    } finally {
+        btn.textContent = oldText;
+    }
+};
+
+window.confirmLocation = function() {
+    const modal = document.getElementById('location-picker-modal');
+    const newLat = parseFloat(modal.getAttribute('data-lat'));
+    const newLng = parseFloat(modal.getAttribute('data-lng'));
+    const newName = modal.getAttribute('data-name') || "Selected Location";
+
+    if (!isNaN(newLat) && !isNaN(newLng)) {
+        userLat = newLat;
+        userLng = newLng;
+        document.getElementById('dynamic-location').textContent = `📍 ${newName} ▼`;
+        
+        // Refresh catalog and stores based on new coords
+        fetchDiscoveryStores(userLat, userLng);
+        fetchProducts();
+    }
+    closeLocationModal();
+};
 
 async function storeFetchWithAuth(url, options = {}) {
     const token = localStorage.getItem('dailyPick_customerToken'); 
@@ -353,7 +453,16 @@ async function initializeLocationAndFetch() {
     const successHandler = (position) => {
         userLat = position.coords.latitude;
         userLng = position.coords.longitude;
-        document.getElementById('dynamic-location').textContent = '📍 Finding fastest route... ▼';
+        // Fire reverse geocode immediately to populate the header beautifully
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLat}&lon=${userLng}`)
+            .then(res => res.json())
+            .then(data => {
+                const name = data.address?.suburb || data.address?.neighbourhood || data.address?.city || 'Near You';
+                document.getElementById('dynamic-location').textContent = `📍 ${name} ▼`;
+            }).catch(() => {
+                document.getElementById('dynamic-location').textContent = '📍 Near You ▼';
+            });
+            
         fetchDiscoveryStores(userLat, userLng);
         fetchProducts(); 
     };
@@ -361,7 +470,7 @@ async function initializeLocationAndFetch() {
     const errorHandler = (error) => {
         console.warn("Location access denied or failed. Loading default catalog.");
         document.getElementById('dynamic-eta').textContent = 'Standard';
-        document.getElementById('dynamic-location').textContent = '📍 Delivery Available ▼';
+        document.getElementById('dynamic-location').textContent = '📍 Set Delivery Location ▼';
         fetchProducts(); 
     };
 
@@ -450,21 +559,13 @@ async function fetchDiscoveryStores(lat, lng) {
         if (result.success && result.data) {
             renderDiscoveryUI(result.data);
             
-            // ENTERPRISE FIX: Dynamically populate ETA and Location headers based on nearest stores
             const etaEl = document.getElementById('dynamic-eta');
-            const locEl = document.getElementById('dynamic-location');
-            
             if (result.data.quickCommerce && result.data.quickCommerce.length > 0) {
-                const closest = result.data.quickCommerce[0];
                 if (etaEl) etaEl.textContent = '15 mins'; 
-                if (locEl) locEl.textContent = `📍 Near ${closest.location} ▼`;
             } else if (result.data.megaMarts && result.data.megaMarts.length > 0) {
-                const closest = result.data.megaMarts[0];
                 if (etaEl) etaEl.textContent = 'Next Day';
-                if (locEl) locEl.textContent = `📍 Near ${closest.location} ▼`;
             } else {
                 if (etaEl) etaEl.textContent = 'Standard';
-                if (locEl) locEl.textContent = '📍 Delivery Available ▼';
             }
         }
     } catch(e) { console.warn("Discovery API unavailable", e); }
@@ -802,12 +903,10 @@ function handleSearch(event) {
     const banner = document.getElementById('partner-brand-banner');
     if (banner) banner.classList.add('hidden');
 
-    // ENTERPRISE OPTIMIZATION: Throttled UI Painting
     clearTimeout(searchDebounceTimeout);
     searchDebounceTimeout = setTimeout(async () => {
         
         requestAnimationFrame(() => {
-            // Local NLP Scoring
             let searchTerms = rawQuery.split(' ');
             for (const [key, related] of Object.entries(commonSynonyms)) {
                 if (rawQuery.includes(key)) searchTerms.push(...related);
@@ -832,14 +931,12 @@ function handleSearch(event) {
             renderProducts(scoredProducts);
         });
         
-        // Background DB Autocomplete Fetch
         try {
             let url = `${BACKEND_URL}/api/products/autocomplete?q=${encodeURIComponent(rawQuery)}`;
             if (userLat && userLng) url += `&lat=${userLat}&lng=${userLng}`;
             const res = await storeFetchWithAuth(url);
             const result = await res.json();
             if (result.success && result.data.length > 0) {
-                // Ensure UI paints only once the data is fully prepped
                 requestAnimationFrame(() => renderProducts(result.data));
             }
         } catch (e) {}
@@ -1187,14 +1284,12 @@ window.setPaymentMethod = function(method) {
     document.getElementById('tab-pay-online').classList.toggle('active', method === 'Online');
 };
 
-/* --- REPLACE EXISTING placeOrder FUNCTION --- */
 async function placeOrder() { 
     if (cart.length === 0 || isProcessingOrder) return; 
     
     const name = document.getElementById('cust-name').value.trim(); 
     const phone = document.getElementById('cust-phone').value.trim(); 
     
-    // ENTERPRISE UPDATE: Grab the selected address from the Address Book
     let address = "";
     if (userAddresses.length > 0 && userAddresses[selectedAddressIndex]) {
         address = userAddresses[selectedAddressIndex].fullAddress;
@@ -1269,7 +1364,6 @@ async function placeOrder() {
                 localStorage.removeItem('dailyPick_cart'); 
                 localStorage.removeItem('dailyPick_pendingPayment'); 
                 
-                // Clear state but keep Auth data intact
                 setDeliveryType('Instant');
                 window.setPaymentMethod('Cash'); 
                 renderProducts(allProducts); 
@@ -1604,13 +1698,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('nav-shop').addEventListener('click', () => switchView('shop'));
     document.getElementById('nav-orders').addEventListener('click', () => switchView('orders'));
     
-    // ENTERPRISE FIX: Wired Categories dock icon to scroll smoothly to the grid
     document.getElementById('nav-cats').addEventListener('click', () => {
         switchView('shop');
         document.getElementById('categories-grid').scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
 
-    // ENTERPRISE FIX: Wired the new Profile dock icon to open the customer login/auth modal
     const navProfile = document.getElementById('nav-profile');
     if (navProfile) navProfile.addEventListener('click', window.openProfileModal);
 
