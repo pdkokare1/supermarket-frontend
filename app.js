@@ -10,6 +10,7 @@ const DELIVERY_FEE = 20;
 const ENABLE_CART_ISOLATION = false; 
 
 let allProducts = []; 
+// ENTERPRISE OPTIMIZATION: Cart Persistence
 let cart = JSON.parse(localStorage.getItem('dailyPick_cart')) || []; 
 let selectedDeliveryType = 'Instant'; 
 let selectedPaymentMethod = 'Cash'; 
@@ -23,6 +24,7 @@ let pendingProductToAdd = null;
 let customerLoyaltyBalance = 0;
 let isLoyaltyApplied = false;
 
+/* --- ADD TO GLOBAL STATE VARIABLES --- */
 let userAddresses = JSON.parse(localStorage.getItem('dailyPick_addresses')) || [];
 let selectedAddressIndex = 0;
 let newAddressTag = 'Home';
@@ -153,10 +155,12 @@ function logoutCustomer() {
         localStorage.removeItem('dailyPick_customerToken');
         showToast("Logged out successfully.");
         updateAuthUI();
+        // Close profile modal if open
         closeProfileModal();
     });
 }
 
+/* --- REPLACE EXISTING updateAuthUI FUNCTION --- */
 async function updateAuthUI() {
     const token = localStorage.getItem('dailyPick_customerToken');
     const profileIcon = document.querySelector('.profile-icon');
@@ -202,6 +206,7 @@ async function updateAuthUI() {
     }
 }
 
+/* --- NEW: ADDRESS BOOK LOGIC --- */
 window.openProfileModal = function() {
     const token = localStorage.getItem('dailyPick_customerToken');
     if (!token) return openCustomerLogin();
@@ -243,6 +248,7 @@ window.saveNewAddress = async function() {
     const fullAddress = `${flat}, ${street}${landmark ? ', Near ' + landmark : ''}`;
     const addressObj = { tag: newAddressTag, fullAddress: fullAddress };
 
+    // Optimistic UI Update
     userAddresses.push(addressObj);
     selectedAddressIndex = userAddresses.length - 1;
     localStorage.setItem('dailyPick_addresses', JSON.stringify(userAddresses));
@@ -251,6 +257,7 @@ window.saveNewAddress = async function() {
     closeAddAddressModal();
     showToast("Address Saved Successfully! 📍");
 
+    // Sync with backend asynchronously
     try {
         await storeFetchWithAuth(`${BACKEND_URL}/api/customers/me/addresses`, {
             method: 'POST',
@@ -284,6 +291,7 @@ function renderAddressBooks() {
         const isSelected = idx === selectedAddressIndex;
         const icon = addr.tag === 'Home' ? '🏠' : (addr.tag === 'Work' ? '🏢' : '📍');
         
+        // Render for Checkout (Selectable Cards)
         checkoutHtml += `
             <div onclick="selectAddress(${idx})" style="background: ${isSelected ? '#e0e7ff' : '#f8fafc'}; border: 1px solid ${isSelected ? 'var(--primary)' : '#e2e8f0'}; padding: 16px; border-radius: 12px; margin-bottom: 8px; cursor: pointer; transition: 0.2s; position: relative;">
                 ${isSelected ? '<div style="position: absolute; top: 12px; right: 12px; color: var(--primary);">✅</div>' : ''}
@@ -292,6 +300,7 @@ function renderAddressBooks() {
             </div>
         `;
 
+        // Render for Profile (Static List)
         profileHtml += `
             <div style="background: white; border: 1px solid #e2e8f0; padding: 16px; border-radius: 12px; margin-bottom: 8px;">
                 <div style="font-size: 14px; font-weight: 800; color: var(--text-main); margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">${icon} ${addr.tag}</div>
@@ -304,6 +313,7 @@ function renderAddressBooks() {
     profileList.innerHTML = profileHtml;
 }
 
+
 // ============================================================================
 // --- NEW: INTERACTIVE MAP & REVERSE GEOCODING MODULE ---
 // ============================================================================
@@ -313,8 +323,9 @@ let locationPickerMarker = null;
 window.openLocationModal = function() {
     document.getElementById('location-picker-modal').classList.add('active');
     
-    if (!locationPickerMap && typeof L !== 'undefined') {
-        setTimeout(() => {
+    // Wait for the CSS bottom-sheet animation to finish (350ms)
+    setTimeout(() => {
+        if (!locationPickerMap && typeof L !== 'undefined') {
             const lat = userLat || 18.6298;
             const lng = userLng || 73.7997;
             
@@ -337,8 +348,12 @@ window.openLocationModal = function() {
             // Initial Geocode run
             updateLocationText(lat, lng);
             
-        }, 350); // Wait for CSS bottom-sheet animation to finish before rendering tiles
-    }
+        } else if (locationPickerMap) {
+            // ENTERPRISE FIX: If the map was already initialized but hidden, 
+            // force Leaflet to recalculate the canvas size now that the modal is visible.
+            locationPickerMap.invalidateSize();
+        }
+    }, 350); 
 };
 
 window.closeLocationModal = function() {
